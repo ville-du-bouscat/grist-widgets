@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Réconciliation Investissement — widget Grist</title>
+<style>
+:root{
+  color-scheme: light;
+  --plane:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --ring:rgba(11,11,11,.10);
+  --track:#eceae4;
+  --eng:#86b6ef; --man:#2a78d6; --accent:#2a78d6;
+  --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --critical:#d03b3b;
+  --good-ink:#006300; --crit-ink:#a32626;
+  --chip:#f0efec;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  color-scheme: dark;
+  --plane:#0d0d0d; --surface:#1a1a19; --ink:#fff; --ink2:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,.10);
+  --track:#2c2c2a;
+  --eng:#3987e5; --man:#9ec5f4; --accent:#3987e5;
+  --good-ink:#0ca30c; --crit-ink:#e66767;
+  --chip:#262624;
+}}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --plane:#0d0d0d; --surface:#1a1a19; --ink:#fff; --ink2:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,.10);
+  --track:#2c2c2a;
+  --eng:#3987e5; --man:#9ec5f4; --accent:#3987e5;
+  --good-ink:#0ca30c; --crit-ink:#e66767;
+  --chip:#262624;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--plane);color:var(--ink);
+ font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+ -webkit-text-size-adjust:100%}
+.wrap{max-width:1240px;margin:0 auto;padding:28px 20px 72px}
+header h1{font-size:1.5rem;margin:0 0 4px;letter-spacing:-.01em}
+.sub{color:var(--ink2);font-size:.9rem;margin:0}
+.banner{margin:18px 0 26px;padding:12px 16px;border-radius:10px;background:var(--surface);
+ border:1px solid var(--ring);font-size:.88rem;color:var(--ink2)}
+.banner b{color:var(--ink)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 20px;border-bottom:1px solid var(--grid);padding-bottom:0}
+.tab{appearance:none;border:0;background:transparent;color:var(--ink2);font:inherit;font-size:.92rem;
+ padding:10px 14px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+.tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.viewnote{font-size:.86rem;color:var(--ink2);margin:0 0 18px;max-width:70ch}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:12px;margin:0 0 24px}
+.tile{background:var(--surface);border:1px solid var(--ring);border-radius:10px;padding:14px 16px}
+.tile .k{font-size:.74rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 6px}
+.tile .v{font-size:1.55rem;font-weight:650;letter-spacing:-.02em;line-height:1.15;
+ font-variant-numeric:tabular-nums}
+.tile .n{font-size:.78rem;color:var(--ink2);margin-top:4px}
+.tile.ok .v{color:var(--good-ink)} .tile.alert .v{color:var(--crit-ink)}
+.bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px}
+.bar input,.bar select{font:inherit;font-size:.88rem;padding:7px 10px;border-radius:8px;
+ border:1px solid var(--axis);background:var(--surface);color:var(--ink);min-width:0}
+.bar input[type=search]{flex:1 1 220px;max-width:100%}
+.bar label{font-size:.82rem;color:var(--ink2)}
+.count{font-size:.82rem;color:var(--muted);margin-left:auto;flex:none}
+.card{background:var(--surface);border:1px solid var(--ring);border-radius:10px;overflow:hidden}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.85rem}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--grid);vertical-align:top}
+th{font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);
+ font-weight:600;white-space:nowrap;position:sticky;top:0;background:var(--surface);z-index:1}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--chip)}
+.mono{font-variant-numeric:tabular-nums;font-size:.8rem;color:var(--ink2);white-space:nowrap}
+.obj{max-width:46ch}
+.op{font-weight:600}
+.meter{display:block;width:150px;height:9px;border-radius:5px;background:var(--track);
+ overflow:hidden;position:relative;margin-top:5px}
+.meter i{position:absolute;top:0;bottom:0;left:0;display:block;border-radius:5px}
+.meter .e{background:var(--eng)} .meter .m{background:var(--man)}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:.75rem;padding:2px 9px;
+ border-radius:999px;background:var(--chip);color:var(--ink2);white-space:nowrap}
+.pill.ok{color:var(--good-ink)} .pill.crit{color:var(--crit-ink)}
+.pill.warn{color:var(--serious)}
+.dot{width:7px;height:7px;border-radius:50%;flex:none}
+.dot.ok{background:var(--good)} .dot.crit{background:var(--critical)}
+.dot.warn{background:var(--warn)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:.78rem;color:var(--ink2);margin:10px 2px 0}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:11px;height:11px;border-radius:3px;flex:none}
+.empty{padding:32px;text-align:center;color:var(--muted);font-size:.88rem}
+details.grp{border-bottom:1px solid var(--grid)}
+details.grp:last-child{border-bottom:0}
+details.grp>summary{cursor:pointer;padding:11px 14px;list-style:none;display:flex;
+ gap:12px;align-items:center;font-size:.88rem}
+details.grp>summary::-webkit-details-marker{display:none}
+details.grp>summary:hover{background:var(--chip)}
+summary .chev{color:var(--muted);transition:transform .15s;flex:none}
+details[open]>summary .chev{transform:rotate(90deg)}
+summary .t{font-weight:600} summary .s{color:var(--ink2);font-size:.82rem}
+summary .r{margin-left:auto;display:flex;gap:14px;align-items:center}
+footer{margin-top:34px;font-size:.8rem;color:var(--muted);max-width:78ch}
+footer b{color:var(--ink2)}
+@media (max-width:640px){
+ .wrap{padding:20px 14px 60px} .tile .v{font-size:1.3rem}
+ .obj{max-width:26ch} .meter{width:96px}
+}
+</style>
+<style>
+.status{display:flex;align-items:center;gap:9px;margin:0 0 18px;padding:9px 14px;border-radius:9px;
+ background:var(--surface);border:1px solid var(--ring);font-size:.83rem;color:var(--ink2)}
+.status .dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--muted)}
+.status.live .dot{background:var(--good)} .status.demo .dot{background:var(--warn)}
+.status.err .dot{background:var(--critical)} .status.err{color:var(--crit-ink)}
+.status b{color:var(--ink)}
+.status .re{margin-left:auto;font:inherit;font-size:.8rem;padding:4px 10px;border-radius:7px;
+ border:1px solid var(--axis);background:transparent;color:var(--ink2);cursor:pointer}
+.status .re:hover{background:var(--chip)}
+body.in-grist .wrap{padding-top:14px}
+body.in-grist header,body.in-grist .banner,body.in-grist footer{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+ <h1>Réconciliation de l'investissement 2026</h1>
+ <p class="sub">Grand Angle&nbsp;↔&nbsp;suivi opérationnel des services techniques</p>
+</header>
+
+<div class="banner">
+ <b>Une seule donnée, trois lectures.</b> Les services techniques travaillent à la sous-opération,
+ le service financier à l'opération, et la troisième vue ne montre que ce qui ne concorde pas.
+ Hors de Grist, cette page affiche un jeu fictif&nbsp;; dans Grist, elle lit les tables du document.
+</div>
+
+<div class="status" id="status"><i class="dot"></i><span id="status-txt">Initialisation…</span><button class="re" id="reload" hidden>Recharger</button></div>
+<div class="tabs" role="tablist">
+ <button class="tab" role="tab" id="t-fin" aria-selected="true" aria-controls="v-fin">Vue finances</button>
+ <button class="tab" role="tab" id="t-st"  aria-selected="false" aria-controls="v-st">Vue services techniques</button>
+ <button class="tab" role="tab" id="t-ec"  aria-selected="false" aria-controls="v-ec">Écarts à traiter</button>
+</div>
+
+<section id="v-fin" role="tabpanel" aria-labelledby="t-fin">
+ <p class="viewnote">Ce que le service financier ouvre pour répondre aux élus&nbsp;: l'état de chaque
+ opération, sans rien demander aux services techniques. Dépliez une opération pour voir ses lignes budgétaires.</p>
+ <div class="tiles" id="fin-tiles"></div>
+ <div class="bar">
+  <input type="search" id="fin-q" placeholder="Rechercher une opération…" aria-label="Rechercher une opération">
+  <span class="count" id="fin-count"></span>
+ </div>
+ <div class="card" id="fin-list"></div>
+ <div class="legend">
+  <span><i class="sw" style="background:var(--man)"></i>Mandaté</span>
+  <span><i class="sw" style="background:var(--eng)"></i>Engagé non mandaté</span>
+  <span><i class="sw" style="background:var(--track)"></i>Disponible</span>
+ </div>
+</section>
+
+<section id="v-st" role="tabpanel" aria-labelledby="t-st" hidden>
+ <p class="viewnote">Ce que les services techniques saisissent aujourd'hui dans leur classeur, à
+ l'identique&nbsp;: le n° INV, le lieu, l'objet, l'agent en charge. Rien ne change pour eux —
+ sauf que le service financier voit la même chose au même moment.</p>
+ <div class="bar">
+  <input type="search" id="st-q" placeholder="Rechercher un lieu, un objet, un agent, un n° INV…" aria-label="Rechercher">
+  <label>Opération <select id="st-op"></select></label>
+  <span class="count" id="st-count"></span>
+ </div>
+ <div class="card scroll"><table id="st-tbl"><thead><tr>
+  <th>N° INV</th><th>Lieu</th><th>Objet</th><th>Agent</th>
+  <th class="num">Budget 2026</th><th class="num">Virements</th>
+  <th class="num">Engagé report</th><th class="num">Engagé 2026</th><th class="num">Disponible</th>
+ </tr></thead><tbody></tbody></table><div class="empty" id="st-empty" hidden>Aucune sous-opération ne correspond.</div></div>
+</section>
+
+<section id="v-ec" role="tabpanel" aria-labelledby="t-ec" hidden>
+ <p class="viewnote">La vue qui remplace la réunion de reconstitution&nbsp;: seules les lignes dont les deux
+ outils ne disent pas la même chose. Aujourd'hui, il y en a peu.</p>
+ <div class="tiles" id="ec-tiles"></div>
+ <div class="bar">
+  <label>Afficher <select id="ec-f">
+   <option value="reels">Les écarts à traiter</option>
+   <option value="date">Les écarts de date seuls</option>
+   <option value="tous">Toutes les lignes rapprochées</option>
+  </select></label>
+  <span class="count" id="ec-count"></span>
+ </div>
+ <div class="card scroll"><table id="ec-tbl"><thead><tr>
+  <th>Opération</th><th>NATANA</th><th>Imputation</th>
+  <th class="num">Budget GDA</th><th class="num">Budget ST</th>
+  <th class="num">Engagé GDA</th><th class="num">Engagé ST</th><th class="num">Δ engagé</th>
+  <th>Statut</th>
+ </tr></thead><tbody></tbody></table><div class="empty" id="ec-empty" hidden>Rien à traiter sur ce filtre.</div></div>
+</section>
+
+<footer>
+ <b>Widget Grist.</b> À ajouter dans un document Grist comme vue personnalisée&nbsp;: il y lit les tables
+ <code>Gda</code>, <code>Suivi_natana</code> et <code>Sous_operations</code> et recalcule le rapprochement
+ en direct. Lecture seule. Ouvert hors de Grist, il n'affiche qu'un jeu de démonstration inventé.
+ — Ville du Bouscat.
+</footer>
+</div>
+<script>
+/* =====================================================================
+   Widget Grist — Réconciliation de l'investissement
+   ---------------------------------------------------------------------
+   Deux modes, automatiques :
+     • ouvert dans Grist  -> lit en direct les tables du document
+     • ouvert seul (double-clic) -> affiche le jeu de démonstration embarqué
+   L'API Grist est chargée depuis l'instance qui affiche le widget
+   (déduite du référent), donc aucune dépendance à un serveur tiers.
+   ===================================================================== */
+
+const TABLES = { gda:'Gda', natana:'Suivi_natana', sousop:'Sous_operations' };
+const GRIST_URL_MANUEL = "";   // ex. "https://grist.numerique.gouv.fr" si le référent est masqué
+
+const DEMO = {"meta": {"date_gda": "2026-06-30", "date_dst": null, "budget_dst": 2278000, "n_lignes": 17, "n_sous": 37, "n_rappro": 15, "couverture": 99.78, "eng_gda": 1274760.0, "man_gda": 775093.0}, "ops": [{"code": "LB100O001", "libelle": "Bâtiments communaux", "budget": 720000, "engage": 446400.0, "mandate": 245520.0, "eng_dst": 0, "man_dst": 0, "n_lignes": 4}, {"code": "LB100O002", "libelle": "Écoles", "budget": 498000, "engage": 308760.0, "mandate": 169818.0, "eng_dst": 0, "man_dst": 0, "n_lignes": 3}, {"code": "LB100O003", "libelle": "Espaces verts", "budget": 180000, "engage": 111600.0, "mandate": 61380.0, "eng_dst": 0, "man_dst": 0, "n_lignes": 2}, {"code": "LB100O004", "libelle": "Voirie", "budget": 230000, "engage": 142600.0, "mandate": 78430.0, "eng_dst": 0, "man_dst": 0, "n_lignes": 2}, {"code": "LB100O005", "libelle": "Petite enfance", "budget": 145000, "engage": 89900.0, "mandate": 49445.0, "eng_dst": 0, "man_dst": 0, "n_lignes": 2}, {"code": "LB100O006", "libelle": "Opération sous AP — groupe scolaire", "budget": 500000, "engage": 170500.0, "mandate": 170500.0, "eng_dst": 0, "man_dst": 0, "n_lignes": 2}], "lignes": [{"code": "LB100O001", "op": "Bâtiments communaux", "natana": 1001, "imput": "20/020/2031_Frais d'études", "onglet": "Bâtiments communaux", "ap": false, "budget": 160000, "budget_dst": 160000, "eng": 99200.0, "eng_dst": 99200.0, "man": 54560.0, "man_dst": 49104.0, "d_bud": 0, "d_eng": 0.0, "d_man": 5456.0, "statut": "Budget et engagements OK — mandaté décalé"}, {"code": "LB100O001", "op": "Bâtiments communaux", "natana": 1002, "imput": "21/020/21351_Inst gén, agenc, aménag des const", "onglet": "Bâtiments communaux", "ap": false, "budget": 470000, "budget_dst": 470000, "eng": 291400.0, "eng_dst": 291400.0, "man": 160270.0, "man_dst": 144243.0, "d_bud": 0, "d_eng": 0.0, "d_man": 16027.0, "statut": "Budget et engagements OK — mandaté décalé"}, {"code": "LB100O001", "op": "Bâtiments communaux", "natana": 1003, "imput": "21/020/2188_Autres immobilisations corporelles", "onglet": "Bâtiments communaux", "ap": false, "budget": 30000, "budget_dst": 30000, "eng": 18600.0, "eng_dst": 18600.0, "man": 10230.0, "man_dst": 9207.0, "d_bud": 0, "d_eng": 0.0, "d_man": 1023.0, "statut": "Budget et engagements OK — mandaté décalé"}, {"code": "LB100O001", "op": "Bâtiments communaux", "natana": 1004, "imput": "23/020/2313_Constructions en cours", "onglet": "Bâtiments communaux", "ap": false, "budget": 60000, "budget_dst": 60000, "eng": 37200.0, "eng_dst": 37200.0, "man": 20460.0, "man_dst": 18414.0, "d_bud": 0, "d_eng": 0.0, "d_man": 2046.0, "statut": "Budget et engagements OK — mandaté décalé"}, {"code": "LB100O002", "op": "Écoles", "natana": 2001, "imput": "21/213/21351_Inst gén, agenc, aménag des const", "onglet": "Écoles", "ap": false, "budget": 300000, "budget_dst": 300000, "eng": 186000.0, "eng_dst": 186000.0, "man": 102300.0, "man_dst": 92070.0, "d_bud": 0, "d_eng": 0.0, "d_man": 10230.0, "statut": "Budget et engagements OK — mandaté décalé"}, {"code": "LB100O002", "op": "Écoles", "natana": 2002, "imput": "21/201/2128_Autres agencements et aménagements", "onglet": "Écoles", "ap": false, "budget": 180000, "budget_dst": 180000, "eng": 111600.0, "eng_dst": 111600.0, "man": 61380.0, "man_dst": 55242.0, "d_bud": 0, "d_eng": 0.0, "d_man": 6138.0, "statut": "Budget et engagements OK — mandaté décalé"}, {"code": "LB100O002", "op": "Écoles", "natana": 2003, "imput": "21/213/2188_Autres immobilisations corporelles", "onglet": "Écoles", "ap": false, "budget": 18000, "budget_dst": 18000, "eng": 11160.0, "eng_dst": 11160.0, "man": 6138.0, "man_dst": 5524.2, "d_bud": 0, "d_eng": 0.0, "d_man": 613.8, "statut": "Budget et engagements OK — mandaté décalé"}, {"code": "LB100O003", "op": "Espaces verts", "natana": 3001, "imput": "21/511/2121_Plantations d'arbres et arbustes", "onglet": "Espaces verts", "ap": false, "budget": 110000, "budget_dst": 110000, "eng": 68200.0, "eng_dst": 68200.0, "man": 37510.0, "man_dst": 33759.0, "d_bud": 0, "d_eng": 0.0, "d_man": 3751.0, "statut": "Budget et engagements OK — mandaté décalé"}, {"code": "LB100O003", "op": "Espaces verts", "natana": 3002, "imput": "21/511/2128_Autres agencements et aménagements", "onglet": "Espaces verts", "ap": false, "budget": 70000, "budget_dst": 70000, "eng": 43400.0, "eng_dst": 43400.0, "man": 23870.0, "man_dst": 21483.0, "d_bud": 0, "d_eng": 0.0, "d_man": 2387.0, "statut": "Budget et engagements OK — mandaté décalé"}, {"code": "LB100O004", "op": "Voirie", "natana": 4001, "imput": "21/847/2128_Autres agencements et aménagements", "onglet": "Voirie", "ap": false, "budget": 180000, "budget_dst": 180000, "eng": 111600.0, "eng_dst": 111600.0, "man": 61380.0, "man_dst": 55242.0, "d_bud": 0, "d_eng": 0.0, "d_man": 6138.0, "statut": "Budget et engagements OK — mandaté décalé"}, {"code": "LB100O004", "op": "Voirie", "natana": 4002, "imput": "21/518/2128_Autres agencements et aménagements", "onglet": "Voirie", "ap": false, "budget": 50000, "budget_dst": 50000, "eng": 31000.0, "eng_dst": 31000.0, "man": 17050.0, "man_dst": 15345.0, "d_bud": 0, "d_eng": 0.0, "d_man": 1705.0, "statut": "Budget et engagements OK — mandaté décalé"}, {"code": "LB100O005", "op": "Petite enfance", "natana": 5001, "imput": "21/4221/21351_Inst gén, agenc, aménag des const", "onglet": "Petite enfance", "ap": false, "budget": 95000, "budget_dst": 95000, "eng": 58900.0, "eng_dst": 58900.0, "man": 32395.0, "man_dst": 29155.5, "d_bud": 0, "d_eng": 0.0, "d_man": 3239.5, "statut": "Budget et engagements OK — mandaté décalé"}, {"code": "LB100O005", "op": "Petite enfance", "natana": 5002, "imput": "21/4221/2128_Autres agencements et aménagements", "onglet": "Petite enfance", "ap": false, "budget": 50000, "budget_dst": 50000, "eng": 31000.0, "eng_dst": 31000.0, "man": 17050.0, "man_dst": 15345.0, "d_bud": 0, "d_eng": 0.0, "d_man": 1705.0, "statut": "Budget et engagements OK — mandaté décalé"}, {"code": "LB100O006", "op": "Opération sous AP — groupe scolaire", "natana": 6001, "imput": "20/213/2031_Frais d'études", "onglet": "Opération sous AP — groupe scolaire", "ap": true, "budget": 200000, "budget_dst": 200000, "eng": 68200.0, "eng_dst": 140000.0, "man": 68200.0, "man_dst": 54560.0, "d_bud": 0, "d_eng": -71800.0, "d_man": 13640.0, "statut": "Budget OK — écart d'engagements"}, {"code": "LB100O006", "op": "Opération sous AP — groupe scolaire", "natana": 6002, "imput": "21/213/21351_Inst gén, agenc, aménag des const", "onglet": "Opération sous AP — groupe scolaire", "ap": true, "budget": 300000, "budget_dst": 300000, "eng": 102300.0, "eng_dst": 210000.0, "man": 102300.0, "man_dst": 81840.0, "d_bud": 0, "d_eng": -107700.0, "d_man": 20460.0, "statut": "Budget OK — écart d'engagements"}, {"code": "LB100O004", "op": "Voirie", "natana": 4099, "imput": "—", "onglet": "Voirie", "ap": false, "budget": null, "budget_dst": 8000, "eng": null, "eng_dst": 8000, "man": null, "man_dst": 4000, "d_bud": null, "d_eng": -8000, "d_man": null, "statut": "Ligne DST sans correspondance GDA"}, {"code": "LB100O003", "op": "Espaces verts", "natana": 3099, "imput": "20/511/2031_Frais d'études", "onglet": null, "ap": false, "budget": 5000, "budget_dst": null, "eng": 5000, "eng_dst": null, "man": 0, "man_dst": null, "d_bud": 5000, "d_eng": 5000, "d_man": 0, "statut": "Crédit GDA non suivi côté DST"}], "sous": [{"code": "LB100O001", "op": "Bâtiments communaux", "natana": 1001, "num": "1001.01-01", "lieu": "CENTRE TECHNIQUE", "objet": "Mise en conformité accessibilité", "agent": "Espaces publics", "budget": 40000.0, "vp": 0, "vm": 0, "engr": 13333.33, "eng26": 20000.0, "dispo": 6666.67, "com": null, "cleOk": true}, {"code": "LB100O001", "op": "Bâtiments communaux", "natana": 1001, "num": "1001.02-02", "lieu": "ÉCOLE DU PARC", "objet": "Remplacement menuiseries", "agent": "Centre technique", "budget": 40000.0, "vp": 0, "vm": 0, "engr": 13333.33, "eng26": 20000.0, "dispo": 6666.67, "com": null, "cleOk": true}, {"code": "LB100O001", "op": "Bâtiments communaux", "natana": 1001, "num": "1001.03-03", "lieu": "ÉCOLE DES TILLEULS", "objet": "Réfection de toiture", "agent": "Direction des services techniques", "budget": 40000.0, "vp": 0, "vm": 0, "engr": 13333.33, "eng26": null, "dispo": 26666.67, "com": null, "cleOk": true}, {"code": "LB100O001", "op": "Bâtiments communaux", "natana": 1002, "num": "1002.01-01", "lieu": "SQUARE NORD", "objet": "Aménagement des abords", "agent": "Bureau d'études", "budget": 126666.67, "vp": 0, "vm": 0, "engr": 30000.0, "eng26": 63333.33, "dispo": 33333.34, "com": null, "cleOk": true}, {"code": "LB100O001", "op": "Bâtiments communaux", "natana": 1002, "num": "1002.02-02", "lieu": "PARC CENTRAL", "objet": "Étude de programmation", "agent": "Espaces publics", "budget": 126666.67, "vp": 0, "vm": 0, "engr": 30000.0, "eng26": 63333.33, "dispo": 33333.34, "com": null, "cleOk": true}, {"code": "LB100O001", "op": "Bâtiments communaux", "natana": 1002, "num": "1002.03-03", "lieu": "RUES DU CENTRE", "objet": "Mobilier et équipement", "agent": "Centre technique", "budget": 126666.67, "vp": 0, "vm": 0, "engr": 30000.0, "eng26": null, "dispo": 96666.67, "com": null, "cleOk": true}, {"code": "LB100O001", "op": "Bâtiments communaux", "natana": 1003, "num": "1003.01-01", "lieu": "PARKING EST", "objet": "Travaux de peinture", "agent": "Direction des services techniques", "budget": 12500.0, "vp": 0, "vm": 0, "engr": 2500.0, "eng26": 6250.0, "dispo": 3750.0, "com": null, "cleOk": true}, {"code": "LB100O001", "op": "Bâtiments communaux", "natana": 1003, "num": "1003.02-02", "lieu": "CRÈCHE LES LUCIOLES", "objet": "Reprise de clôture", "agent": "Bureau d'études", "budget": 12500.0, "vp": 0, "vm": 0, "engr": 2500.0, "eng26": null, "dispo": 10000.0, "com": null, "cleOk": true}, {"code": "LB100O001", "op": "Bâtiments communaux", "natana": 1004, "num": "1004.01-01", "lieu": "CRÈCHE LE NID", "objet": "Végétalisation de cour", "agent": "Espaces publics", "budget": 30000.0, "vp": 0, "vm": 0, "engr": null, "eng26": 15000.0, "dispo": 15000.0, "com": null, "cleOk": true}, {"code": "LB100O001", "op": "Bâtiments communaux", "natana": 1004, "num": "1004.02-02", "lieu": "GROUPE SCOLAIRE SUD", "objet": "Signalétique", "agent": "Centre technique", "budget": 30000.0, "vp": 0, "vm": 0, "engr": null, "eng26": null, "dispo": 30000.0, "com": null, "cleOk": true}, {"code": "LB100O002", "op": "Écoles", "natana": 2001, "num": "2001.01-01", "lieu": "GYMNASE", "objet": "Étude de sol", "agent": "Direction des services techniques", "budget": 80000.0, "vp": 0, "vm": 0, "engr": 20000.0, "eng26": 40000.0, "dispo": 20000.0, "com": null, "cleOk": true}, {"code": "LB100O002", "op": "Écoles", "natana": 2001, "num": "2001.02-02", "lieu": "MAIRIE", "objet": "Ligne générique travaux divers", "agent": "Bureau d'études", "budget": 80000.0, "vp": 0, "vm": 0, "engr": 20000.0, "eng26": 40000.0, "dispo": 20000.0, "com": null, "cleOk": true}, {"code": "LB100O002", "op": "Écoles", "natana": 2001, "num": "2001.03-03", "lieu": "CENTRE TECHNIQUE", "objet": "Mise en conformité accessibilité", "agent": "Espaces publics", "budget": 80000.0, "vp": 0, "vm": 0, "engr": 20000.0, "eng26": null, "dispo": 60000.0, "com": null, "cleOk": true}, {"code": "LB100O002", "op": "Écoles", "natana": 2002, "num": "2002.01-01", "lieu": "ÉCOLE DU PARC", "objet": "Remplacement menuiseries", "agent": "Centre technique", "budget": 60000.0, "vp": 0, "vm": 0, "engr": null, "eng26": 30000.0, "dispo": 30000.0, "com": null, "cleOk": true}, {"code": "LB100O002", "op": "Écoles", "natana": 2002, "num": "2002.02-02", "lieu": "ÉCOLE DES TILLEULS", "objet": "Réfection de toiture", "agent": "Direction des services techniques", "budget": 60000.0, "vp": 0, "vm": 0, "engr": null, "eng26": 30000.0, "dispo": 30000.0, "com": null, "cleOk": true}, {"code": "LB100O002", "op": "Écoles", "natana": 2002, "num": "2002.03-03", "lieu": "SQUARE NORD", "objet": "Aménagement des abords", "agent": "Bureau d'études", "budget": 60000.0, "vp": 0, "vm": 0, "engr": null, "eng26": null, "dispo": 60000.0, "com": null, "cleOk": true}, {"code": "LB100O002", "op": "Écoles", "natana": 2003, "num": "2003.01-01", "lieu": "PARC CENTRAL", "objet": "Étude de programmation", "agent": "Espaces publics", "budget": 7500.0, "vp": 0, "vm": 0, "engr": 1500.0, "eng26": 3750.0, "dispo": 2250.0, "com": null, "cleOk": true}, {"code": "LB100O002", "op": "Écoles", "natana": 2003, "num": "2003.02-02", "lieu": "RUES DU CENTRE", "objet": "Mobilier et équipement", "agent": "Centre technique", "budget": 7500.0, "vp": 0, "vm": 0, "engr": 1500.0, "eng26": null, "dispo": 6000.0, "com": null, "cleOk": true}, {"code": "LB100O003", "op": "Espaces verts", "natana": 3001, "num": "3001.01-01", "lieu": "PARKING EST", "objet": "Travaux de peinture", "agent": "Direction des services techniques", "budget": 45000.0, "vp": 0, "vm": 0, "engr": 10000.0, "eng26": 22500.0, "dispo": 12500.0, "com": null, "cleOk": true}, {"code": "LB100O003", "op": "Espaces verts", "natana": 3001, "num": "3001.02-02", "lieu": "CRÈCHE LES LUCIOLES", "objet": "Reprise de clôture", "agent": "Bureau d'études", "budget": 45000.0, "vp": 0, "vm": 0, "engr": 10000.0, "eng26": null, "dispo": 35000.0, "com": null, "cleOk": true}, {"code": "LB100O003", "op": "Espaces verts", "natana": 3002, "num": "3002.01-01", "lieu": "CRÈCHE LE NID", "objet": "Végétalisation de cour", "agent": "Espaces publics", "budget": 35000.0, "vp": 0, "vm": 0, "engr": null, "eng26": 17500.0, "dispo": 17500.0, "com": null, "cleOk": true}, {"code": "LB100O003", "op": "Espaces verts", "natana": 3002, "num": "3002.02-02", "lieu": "GROUPE SCOLAIRE SUD", "objet": "Signalétique", "agent": "Centre technique", "budget": 35000.0, "vp": 0, "vm": 0, "engr": null, "eng26": null, "dispo": 35000.0, "com": null, "cleOk": true}, {"code": "LB100O004", "op": "Voirie", "natana": 4001, "num": "4001.01-01", "lieu": "GYMNASE", "objet": "Étude de sol", "agent": "Direction des services techniques", "budget": 50000.0, "vp": 0, "vm": 0, "engr": 10000.0, "eng26": 25000.0, "dispo": 15000.0, "com": null, "cleOk": true}, {"code": "LB100O004", "op": "Voirie", "natana": 4001, "num": "4001.02-02", "lieu": "MAIRIE", "objet": "Ligne générique travaux divers", "agent": "Bureau d'études", "budget": 50000.0, "vp": 0, "vm": 0, "engr": 10000.0, "eng26": 25000.0, "dispo": 15000.0, "com": null, "cleOk": true}, {"code": "LB100O004", "op": "Voirie", "natana": 4001, "num": "4001.03-03", "lieu": "CENTRE TECHNIQUE", "objet": "Mise en conformité accessibilité", "agent": "Espaces publics", "budget": 50000.0, "vp": 0, "vm": 0, "engr": 10000.0, "eng26": null, "dispo": 40000.0, "com": null, "cleOk": true}, {"code": "LB100O004", "op": "Voirie", "natana": 4002, "num": "4002.01-01", "lieu": "ÉCOLE DU PARC", "objet": "Remplacement menuiseries", "agent": "Centre technique", "budget": 25000.0, "vp": 0, "vm": 0, "engr": null, "eng26": 12500.0, "dispo": 12500.0, "com": null, "cleOk": true}, {"code": "LB100O004", "op": "Voirie", "natana": 4002, "num": "4002.02-02", "lieu": "ÉCOLE DES TILLEULS", "objet": "Réfection de toiture", "agent": "Direction des services techniques", "budget": 25000.0, "vp": 0, "vm": 0, "engr": null, "eng26": null, "dispo": 25000.0, "com": null, "cleOk": true}, {"code": "LB100O005", "op": "Petite enfance", "natana": 5001, "num": "5001.01-01", "lieu": "SQUARE NORD", "objet": "Aménagement des abords", "agent": "Bureau d'études", "budget": 47500.0, "vp": 0, "vm": 0, "engr": null, "eng26": 23750.0, "dispo": 23750.0, "com": null, "cleOk": true}, {"code": "LB100O005", "op": "Petite enfance", "natana": 5001, "num": "5001.02-02", "lieu": "PARC CENTRAL", "objet": "Étude de programmation", "agent": "Espaces publics", "budget": 47500.0, "vp": 0, "vm": 0, "engr": null, "eng26": null, "dispo": 47500.0, "com": null, "cleOk": true}, {"code": "LB100O005", "op": "Petite enfance", "natana": 5002, "num": "5002.01-01", "lieu": "RUES DU CENTRE", "objet": "Mobilier et équipement", "agent": "Centre technique", "budget": 20000.0, "vp": 0, "vm": 0, "engr": 5000.0, "eng26": 10000.0, "dispo": 5000.0, "com": null, "cleOk": true}, {"code": "LB100O005", "op": "Petite enfance", "natana": 5002, "num": "5002.02-02", "lieu": "PARKING EST", "objet": "Travaux de peinture", "agent": "Direction des services techniques", "budget": 20000.0, "vp": 0, "vm": 0, "engr": 5000.0, "eng26": null, "dispo": 15000.0, "com": null, "cleOk": true}, {"code": "LB100O006", "op": "Opération sous AP — groupe scolaire", "natana": 6001, "num": "6001.01-01", "lieu": "CRÈCHE LES LUCIOLES", "objet": "Reprise de clôture", "agent": "Bureau d'études", "budget": 66666.67, "vp": 0, "vm": 0, "engr": null, "eng26": 33333.33, "dispo": 33333.34, "com": null, "cleOk": true}, {"code": "LB100O006", "op": "Opération sous AP — groupe scolaire", "natana": 6001, "num": "6001.02-02", "lieu": "CRÈCHE LE NID", "objet": "Végétalisation de cour", "agent": "Espaces publics", "budget": 66666.67, "vp": 0, "vm": 0, "engr": null, "eng26": 33333.33, "dispo": 33333.34, "com": null, "cleOk": true}, {"code": "LB100O006", "op": "Opération sous AP — groupe scolaire", "natana": 6001, "num": "6001.03-03", "lieu": "GROUPE SCOLAIRE SUD", "objet": "Signalétique", "agent": "Centre technique", "budget": 66666.67, "vp": 0, "vm": 0, "engr": null, "eng26": null, "dispo": 66666.67, "com": null, "cleOk": true}, {"code": "LB100O006", "op": "Opération sous AP — groupe scolaire", "natana": 6002, "num": "6002.01-01", "lieu": "GYMNASE", "objet": "Étude de sol", "agent": "Direction des services techniques", "budget": 100000.0, "vp": 0, "vm": 0, "engr": null, "eng26": 50000.0, "dispo": 50000.0, "com": null, "cleOk": true}, {"code": "LB100O006", "op": "Opération sous AP — groupe scolaire", "natana": 6002, "num": "6002.02-02", "lieu": "MAIRIE", "objet": "Ligne générique travaux divers", "agent": "Bureau d'études", "budget": 100000.0, "vp": 0, "vm": 0, "engr": null, "eng26": 50000.0, "dispo": 50000.0, "com": null, "cleOk": true}, {"code": "LB100O006", "op": "Opération sous AP — groupe scolaire", "natana": 6002, "num": "6002.03-03", "lieu": "CENTRE TECHNIQUE", "objet": "Mise en conformité accessibilité", "agent": "Espaces publics", "budget": 100000.0, "vp": 0, "vm": 0, "engr": null, "eng26": null, "dispo": 100000.0, "com": null, "cleOk": true}]};
+let DATA = DEMO;
+
+/* ---------- utilitaires ---------- */
+const eur = n => (n===null||n===undefined) ? '–'
+  : n.toLocaleString('fr-FR',{minimumFractionDigits:0,maximumFractionDigits:0})+' €';
+const eur2 = n => (n===null||n===undefined||n===0) ? '–'
+  : n.toLocaleString('fr-FR',{minimumFractionDigits:0,maximumFractionDigits:0})+' €';
+const esc = s => (s??'').toString().replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nz = n => Number(n)||0;
+const r2 = n => Math.round(n*100)/100;
+const subst = l => !!(nz(l.budget)||nz(l.budget_dst)||nz(l.eng)||nz(l.eng_dst)||nz(l.man)||nz(l.man_dst));
+const isEcart = l => { const s=l.statut||'';
+  return s.startsWith("Budget OK — écart")||s.startsWith('Crédit GDA')||s.startsWith('Ligne DST'); };
+
+function setStatus(kind, html, showReload){
+  const el=document.getElementById('status');
+  el.className='status '+kind;
+  document.getElementById('status-txt').innerHTML=html;
+  document.getElementById('reload').hidden=!showReload;
+}
+
+/* ---------- colonnes -> lignes (fetchTable renvoie par colonne) ---------- */
+function toRows(t){
+  if(!t || !t.id) return [];
+  const cols=Object.keys(t);
+  return t.id.map((_,i)=>{ const o={}; cols.forEach(c=>o[c]=t[c][i]); return o; });
+}
+const cle = r => (r.Cle_INV && String(r.Cle_INV).trim())
+  || (r.Code_operation && r.Natana!=null ? r.Code_operation+'|'+parseInt(r.Natana,10) : null);
+
+/* ---------- construction du modèle depuis les 3 tables ---------- */
+function build(gdaRows, natRows, sousRows){
+  const nat=new Map(), sousByCle=new Map();
+  natRows.forEach(r=>{ const k=cle(r); if(k) nat.set(k,r); });
+  sousRows.forEach(r=>{ const k=cle(r); if(!k) return;
+    if(!sousByCle.has(k)) sousByCle.set(k,[]); sousByCle.get(k).push(r); });
+
+  const lignes=[], vus=new Set();
+  gdaRows.forEach(g=>{
+    const k=cle(g); const s=k?nat.get(k):null; if(k) vus.add(k);
+    const budget=nz(g.Budget_vote), eng=nz(g.Consomme), man=nz(g.Mandate);
+    const bDst=s?nz(s.Budget_global):null, eDst=s?nz(s.Total_engage_saisi):null, mDst=s?nz(s.Mandate):null;
+    const d_bud=r2(budget-nz(bDst)), d_eng=r2(eng-nz(eDst)), d_man=r2(man-nz(mDst));
+    let statut;
+    if(!s) statut = budget ? 'Crédit GDA non suivi côté DST' : 'Ligne à zéro, non reprise côté DST';
+    else if(Math.abs(d_bud)>=1) statut='Écart de budget';
+    else if(Math.abs(d_eng)>1)  statut="Budget OK — écart d'engagements";
+    else if(Math.abs(d_man)>1)  statut='Budget et engagements OK — mandaté décalé';
+    else statut='Rapproché intégralement';
+    lignes.push({ code:g.Code_operation, op:g.Operation||'—',
+      natana:(g.Natana==null?null:parseInt(g.Natana,10)),
+      imput:g.Imputation||'—', onglet:s?s.Onglet:null, ap:(g.Type_env==='AP'),
+      budget, budget_dst:bDst, eng, eng_dst:eDst, man, man_dst:mDst,
+      d_bud, d_eng, d_man, statut });
+  });
+  /* lignes suivies que la comptabilité ne connaît pas */
+  nat.forEach((s,k)=>{ if(vus.has(k)) return;
+    lignes.push({ code:s.Code_operation, op:s.Operation||'—',
+      natana:(s.Natana==null?null:parseInt(s.Natana,10)),
+      imput:'—', onglet:s.Onglet, ap:false,
+      budget:null, budget_dst:nz(s.Budget_global), eng:null, eng_dst:nz(s.Total_engage_saisi),
+      man:null, man_dst:nz(s.Mandate),
+      d_bud:null, d_eng:r2(0-nz(s.Total_engage_saisi)), d_man:null,
+      statut:'Ligne DST sans correspondance GDA' }); });
+
+  const ops=[]; const parOp=new Map();
+  lignes.forEach(l=>{ if(!parOp.has(l.code)) parOp.set(l.code,[]); parOp.get(l.code).push(l); });
+  parOp.forEach((ls,code)=>{
+    const S=f=>ls.reduce((a,l)=>a+nz(l[f]),0);
+    ops.push({ code, libelle:(ls[0].op||'—'), budget:S('budget'),
+      engage:S('eng'), mandate:S('man'), eng_dst:S('eng_dst'), man_dst:S('man_dst'),
+      n_lignes:ls.length }); });
+  ops.sort((a,b)=>b.budget-a.budget);
+
+  const sous=sousRows.map(r=>({ code:r.Code_operation, op:r.Operation||'—',
+    natana:(r.Natana==null?null:parseInt(r.Natana,10)), num:r.Num_inv,
+    lieu:r.Lieu, objet:r.Objet, agent:r.Agent,
+    budget:(r.Budget_2026==null?null:nz(r.Budget_2026)),
+    vp:nz(r.Virement_plus), vm:nz(r.Virement_moins),
+    engr:(r.Engage_report==null?null:nz(r.Engage_report)),
+    eng26:(r.Engage_2026==null?null:nz(r.Engage_2026)),
+    dispo:r2(nz(r.Budget_2026)+nz(r.Virement_plus)+nz(r.Virement_moins)
+             -nz(r.Engage_report)-nz(r.Engage_2026)),
+    com:r.Commentaire, cleOk:!!cle(r) && nat.has(cle(r)) }));
+
+  const rap=lignes.filter(l=>l.budget_dst!==null&&l.budget!==null);
+  const dateGda=(gdaRows.find(g=>g.Date_extraction)||{}).Date_extraction||null;
+  return { meta:{ date_gda:dateGda, date_dst:null,
+      budget_dst:lignes.reduce((a,l)=>a+nz(l.budget),0),
+      n_lignes:lignes.length, n_sous:sous.length, n_rappro:rap.length,
+      couverture: r2(rap.reduce((a,l)=>a+nz(l.budget),0)
+                   / (lignes.reduce((a,l)=>a+nz(l.budget),0)||1) * 100),
+      eng_gda:lignes.reduce((a,l)=>a+nz(l.eng),0),
+      man_gda:lignes.reduce((a,l)=>a+nz(l.man),0) },
+    ops, lignes, sous };
+}
+
+/* ---------- connexion à Grist ---------- */
+function chargerScript(url){
+  return new Promise((ok,ko)=>{ const s=document.createElement('script');
+    s.src=url; s.onload=ok; s.onerror=()=>ko(new Error(url)); document.head.appendChild(s); });
+}
+function origineGrist(){
+  if(GRIST_URL_MANUEL) return GRIST_URL_MANUEL.replace(/\/$/,'');
+  try { if(document.referrer) return new URL(document.referrer).origin; } catch(e){}
+  return null;
+}
+async function bootGrist(){
+  if(window.self===window.top) return false;          // pas dans un cadre -> mode démo
+  const origine=origineGrist();
+  if(!origine) throw new Error("instance Grist introuvable (référent masqué) — renseigner GRIST_URL_MANUEL");
+  document.body.classList.add('in-grist');
+  setStatus('', 'Connexion à <b>'+esc(origine)+'</b>…', false);
+  await chargerScript(origine+'/grist-plugin-api.js');
+  if(!window.grist) throw new Error("l'API Grist ne s'est pas chargée");
+  grist.ready({ requiredAccess:'full' });             // lecture de plusieurs tables
+  await rafraichir();
+  grist.onRecords(()=>rafraichir());                  // resaisie -> réaffichage
+  return true;
+}
+async function rafraichir(){
+  const [g,n,s]=await Promise.all([
+    grist.docApi.fetchTable(TABLES.gda),
+    grist.docApi.fetchTable(TABLES.natana),
+    grist.docApi.fetchTable(TABLES.sousop)]);
+  DATA=build(toRows(g),toRows(n),toRows(s));
+  rendreTout();
+  const orphelines=DATA.sous.filter(x=>!x.cleOk).length;
+  setStatus('live','<b>Connecté à Grist</b> — '+DATA.lignes.length+' lignes budgétaires, '
+    +DATA.sous.length+' sous-opérations'
+    +(DATA.meta.date_gda?' · extraction du '+esc(DATA.meta.date_gda):'')
+    +(orphelines?' · <b style="color:var(--crit-ink)">'+orphelines+' sous-opération(s) à clé incomplète</b>':''), true);
+}
+
+/* ---------- rendu ---------- */
+const tabs=[...document.querySelectorAll('.tab')];
+tabs.forEach(t=>t.addEventListener('click',()=>{
+  tabs.forEach(o=>{o.setAttribute('aria-selected',String(o===t));
+    document.getElementById(o.getAttribute('aria-controls')).hidden=(o!==t);});
+}));
+let lignesByOp={};
+function statutPill(l){ const s=l.statut||'';
+  if(s.startsWith('Rapproché')||s.startsWith('Budget et engagements'))
+    return '<span class="pill ok"><i class="dot ok"></i>identique</span>';
+  if(s.startsWith("Budget OK — écart")) return '<span class="pill crit"><i class="dot crit"></i>engagements divergents</span>';
+  if(s.startsWith('Écart de budget'))   return '<span class="pill crit"><i class="dot crit"></i>budget divergent</span>';
+  if(s.startsWith('Crédit GDA'))        return '<span class="pill crit"><i class="dot crit"></i>non suivi côté ST</span>';
+  if(s.startsWith('Ligne DST'))         return '<span class="pill warn"><i class="dot warn"></i>absente de GDA</span>';
+  return '<span class="pill">ligne à zéro</span>'; }
+const ecartsOf = code => (lignesByOp[code]||[]).filter(l=>subst(l)&&isEcart(l)).length;
+
+function rendreFin(){
+  const M=DATA.meta;
+  document.getElementById('fin-tiles').innerHTML=[
+   ['Budget investissement DST',eur(M.budget_dst),DATA.ops.length+' opérations',''],
+   ['Engagé (Grand Angle)',eur(M.eng_gda),M.budget_dst?Math.round(M.eng_gda/M.budget_dst*100)+' % du budget':'',''],
+   ['Mandaté (Grand Angle)',eur(M.man_gda),M.eng_gda?Math.round(M.man_gda/M.eng_gda*100)+" % de l'engagé":'',''],
+   ['Couverture par le suivi ST',String(M.couverture).replace('.',',')+' %',M.n_rappro+' lignes rapprochées','ok'],
+  ].map(([k,v,n,c])=>`<div class="tile ${c}"><p class="k">${k}</p><div class="v">${v}</div><p class="n">${n}</p></div>`).join('');
+  const q=document.getElementById('fin-q').value.trim().toLowerCase();
+  const list=DATA.ops.filter(o=>!q||((o.code||'')+' '+o.libelle).toLowerCase().includes(q));
+  document.getElementById('fin-count').textContent=list.length+' opération'+(list.length>1?'s':'');
+  document.getElementById('fin-list').innerHTML=list.length?list.map(o=>{
+    const b=nz(o.budget),e=nz(o.engage),m=nz(o.mandate);
+    const pe=b?Math.min(100,e/b*100):0, pm=b?Math.min(100,m/b*100):0;
+    const all=lignesByOp[o.code]||[], kept=all.filter(subst), hidden=all.length-kept.length;
+    const rows=kept.map(l=>`<tr>
+      <td class="mono">${l.natana??'–'}</td>
+      <td class="obj">${esc(l.imput)}${l.ap?' <span class="pill">AP</span>':''}</td>
+      <td class="num">${eur(l.budget)}</td><td class="num">${eur2(l.eng)}</td>
+      <td class="num">${eur2(l.man)}</td><td class="num">${eur2(nz(l.budget)-nz(l.eng))}</td>
+      <td>${statutPill(l)}</td></tr>`).join('');
+    const ec=ecartsOf(o.code);
+    return `<details class="grp"><summary><span class="chev">▶</span>
+      <span><span class="t">${esc(o.libelle)}</span> <span class="s">${esc(o.code)}</span></span>
+      <span class="r"><span class="s">${ec?`<span class="pill crit"><i class="dot crit"></i>${ec} écart${ec>1?'s':''}</span>`
+        :'<span class="pill ok"><i class="dot ok"></i>conforme</span>'}</span>
+       <span style="text-align:right"><b class="mono" style="color:var(--ink);font-size:.9rem">${eur(o.budget)}</b>
+        <span class="meter"><i class="e" style="width:${pe}%"></i><i class="m" style="width:${pm}%"></i></span></span>
+      </span></summary><div class="scroll"><table><thead><tr>
+        <th>NATANA</th><th>Imputation</th><th class="num">Budget voté</th><th class="num">Engagé</th>
+        <th class="num">Mandaté</th><th class="num">Disponible</th><th>Rapprochement</th>
+      </tr></thead><tbody>${rows}</tbody></table>${hidden?`<div style="padding:8px 14px;font-size:.78rem;color:var(--muted)">${hidden} ligne${hidden>1?'s':''} sans crédit ni engagement, masquée${hidden>1?'s':''}.</div>`:''}</div></details>`;
+  }).join('') : '<div class="empty">Aucune opération ne correspond.</div>';
+}
+function rendreST(){
+  const sel=document.getElementById('st-op');
+  const courant=sel.value;
+  sel.innerHTML='<option value="">Toutes</option>'+DATA.ops.map(o=>`<option value="${esc(o.code)}">${esc(o.libelle)}</option>`).join('');
+  sel.value=courant;
+  const q=document.getElementById('st-q').value.trim().toLowerCase(), op=sel.value;
+  const rows=DATA.sous.filter(s=>(!op||s.code===op)&&
+    (!q||[s.num,s.lieu,s.objet,s.agent].join(' ').toLowerCase().includes(q)));
+  document.getElementById('st-count').textContent=rows.length+' sous-opération'+(rows.length>1?'s':'');
+  document.querySelector('#st-tbl tbody').innerHTML=rows.map(s=>{
+    const vir=nz(s.vp)+nz(s.vm);
+    return `<tr${s.cleOk===false?' style="box-shadow:inset 3px 0 0 var(--critical)"':''}>
+      <td class="mono">${esc(s.num)}${s.cleOk===false?' <span class="pill crit">clé incomplète</span>':''}</td>
+      <td>${esc(s.lieu)||'–'}</td><td class="obj">${esc(s.objet)||'–'}</td>
+      <td class="mono">${esc(s.agent)||'–'}</td><td class="num">${eur(s.budget)}</td>
+      <td class="num"${vir?` style="color:${vir<0?'var(--crit-ink)':'var(--good-ink)'}"`:''}>${vir?(vir>0?'+':'')+eur(vir):'–'}</td>
+      <td class="num">${eur2(s.engr)}</td><td class="num">${eur2(s.eng26)}</td>
+      <td class="num">${eur2(s.dispo)}</td></tr>`;}).join('');
+  document.getElementById('st-empty').hidden=rows.length>0;
+}
+function rendreEC(){
+  const M=DATA.meta;
+  const reels=DATA.lignes.filter(l=>subst(l)&&isEcart(l));
+  const dates=DATA.lignes.filter(l=>(l.statut||'').startsWith('Budget et engagements'));
+  const zeros=DATA.lignes.filter(l=>!subst(l)&&isEcart(l)).length;
+  const dEng=reels.reduce((a,l)=>a+Math.abs(nz(l.d_eng)),0);
+  document.getElementById('ec-tiles').innerHTML=[
+   ['Lignes à traiter',reels.length,'sur '+M.n_lignes+' lignes ('+zeros+' à zéro écartées)',reels.length?'alert':'ok'],
+   ['Enjeu financier',eur(dEng),'écart cumulé sur les engagements','alert'],
+   ['Écarts de date seuls',dates.length,'mandatements entre les deux photos',''],
+   ['Budgets divergents',DATA.lignes.filter(l=>(l.statut||'').startsWith('Écart de budget')).length,
+    'sur '+M.n_rappro+' lignes rapprochées','ok'],
+  ].map(([k,v,n,c])=>`<div class="tile ${c}"><p class="k">${k}</p><div class="v">${v}</div><p class="n">${n}</p></div>`).join('');
+  const f=document.getElementById('ec-f').value;
+  const rows=f==='reels'?reels:f==='date'?dates:DATA.lignes.filter(l=>subst(l)&&l.budget_dst!==null);
+  document.getElementById('ec-count').textContent=rows.length+' ligne'+(rows.length>1?'s':'');
+  document.querySelector('#ec-tbl tbody').innerHTML=rows.map(l=>`<tr>
+    <td><span class="op">${esc(l.op)}</span><br><span class="mono">${esc(l.code)}</span></td>
+    <td class="mono">${l.natana??'–'}</td>
+    <td class="obj">${esc(l.imput)}${l.ap?' <span class="pill">AP</span>':''}</td>
+    <td class="num">${eur(l.budget)}</td><td class="num">${eur(l.budget_dst)}</td>
+    <td class="num">${eur2(l.eng)}</td><td class="num">${eur2(l.eng_dst)}</td>
+    <td class="num"${Math.abs(nz(l.d_eng))>1?' style="color:var(--crit-ink);font-weight:600"':''}>${
+      Math.abs(nz(l.d_eng))>1?eur(l.d_eng):'–'}</td>
+    <td>${statutPill(l)}</td></tr>`).join('');
+  document.getElementById('ec-empty').hidden=rows.length>0;
+}
+function rendreTout(){
+  lignesByOp={}; DATA.lignes.forEach(l=>{(lignesByOp[l.code] ||= []).push(l)});
+  rendreFin(); rendreST(); rendreEC();
+}
+document.getElementById('fin-q').addEventListener('input',rendreFin);
+document.getElementById('st-q').addEventListener('input',rendreST);
+document.getElementById('st-op').addEventListener('change',rendreST);
+document.getElementById('ec-f').addEventListener('change',rendreEC);
+document.getElementById('reload').addEventListener('click',()=>{
+  if(window.grist) rafraichir().catch(e=>setStatus('err','Erreur : '+esc(e.message),true)); });
+
+/* ---------- démarrage ---------- */
+rendreTout();
+bootGrist().then(connecte=>{
+  if(!connecte) setStatus('demo','<b>Jeu de démonstration fictif</b> — cette page n\'est pas affichée '
+    +'dans Grist. Aucune donnée réelle n\'est contenue ici ; les chiffres sont inventés.', false);
+}).catch(e=>{
+  rendreTout();
+  setStatus('err','<b>Connexion à Grist impossible</b> — '+esc(e.message)
+    +'. Affichage du jeu embarqué.', true);
+});
+</script>
+</body>
+</html>

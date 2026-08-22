@@ -1,0 +1,15 @@
+# Métadonnées macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Garde-fou : aucune donnée réelle de la commune dans ce dépôt public.
+# Les extractions Grand Angle et les classeurs de suivi ne doivent jamais
+# être committés, même temporairement — l'historique Git les conserverait.
+*.csv
+*.xlsx
+*.xls
+*.xlsm
+*.ods
