@@ -217,10 +217,14 @@ const DEMO = {"meta": {"date_gda": "2026-06-30", "date_dst": null, "budget_dst":
 let DATA = DEMO;
 
 /* ---------- utilitaires ---------- */
+// eurR : arrondi à l'euro, réservé aux grands indicateurs et aux totaux d'opération.
+// eur / eur2 : au centime, partout où l'on prépare une écriture (virement, engagement, écart).
+const eurR = n => (n===null||n===undefined) ? '–'
+  : n.toLocaleString('fr-FR',{minimumFractionDigits:0,maximumFractionDigits:0})+' €';
 const eur = n => (n===null||n===undefined) ? '–'
-  : n.toLocaleString('fr-FR',{minimumFractionDigits:0,maximumFractionDigits:0})+' €';
+  : n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
 const eur2 = n => (n===null||n===undefined||n===0) ? '–'
-  : n.toLocaleString('fr-FR',{minimumFractionDigits:0,maximumFractionDigits:0})+' €';
+  : n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' €';
 const esc = s => (s??'').toString().replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const nz = n => Number(n)||0;
 const r2 = n => Math.round(n*100)/100;
@@ -368,9 +372,9 @@ const ecartsOf = code => (lignesByOp[code]||[]).filter(l=>subst(l)&&isEcart(l)).
 function rendreFin(){
   const M=DATA.meta;
   document.getElementById('fin-tiles').innerHTML=[
-   ['Budget investissement DST',eur(M.budget_dst),DATA.ops.length+' opérations',''],
-   ['Engagé (Grand Angle)',eur(M.eng_gda),M.budget_dst?Math.round(M.eng_gda/M.budget_dst*100)+' % du budget':'',''],
-   ['Mandaté (Grand Angle)',eur(M.man_gda),M.eng_gda?Math.round(M.man_gda/M.eng_gda*100)+" % de l'engagé":'',''],
+   ['Budget investissement DST',eurR(M.budget_dst),DATA.ops.length+' opérations',''],
+   ['Engagé (Grand Angle)',eurR(M.eng_gda),M.budget_dst?Math.round(M.eng_gda/M.budget_dst*100)+' % du budget':'',''],
+   ['Mandaté (Grand Angle)',eurR(M.man_gda),M.eng_gda?Math.round(M.man_gda/M.eng_gda*100)+" % de l'engagé":'',''],
    ['Couverture par le suivi ST',String(M.couverture).replace('.',',')+' %',M.n_rappro+' lignes rapprochées','ok'],
   ].map(([k,v,n,c])=>`<div class="tile ${c}"><p class="k">${k}</p><div class="v">${v}</div><p class="n">${n}</p></div>`).join('');
   const q=document.getElementById('fin-q').value.trim().toLowerCase();
@@ -391,7 +395,7 @@ function rendreFin(){
       <span><span class="t">${esc(o.libelle)}</span> <span class="s">${esc(o.code)}</span></span>
       <span class="r"><span class="s">${ec?`<span class="pill crit"><i class="dot crit"></i>${ec} écart${ec>1?'s':''}</span>`
         :'<span class="pill ok"><i class="dot ok"></i>conforme</span>'}</span>
-       <span style="text-align:right"><b class="mono" style="color:var(--ink);font-size:.9rem">${eur(o.budget)}</b>
+       <span style="text-align:right"><b class="mono" style="color:var(--ink);font-size:.9rem">${eurR(o.budget)}</b>
         <span class="meter"><i class="e" style="width:${pe}%"></i><i class="m" style="width:${pm}%"></i></span></span>
       </span></summary><div class="scroll"><table><thead><tr>
         <th>NATANA</th><th>Imputation</th><th class="num">Budget voté</th><th class="num">Engagé</th>
@@ -427,7 +431,7 @@ function rendreEC(){
   const dEng=reels.reduce((a,l)=>a+Math.abs(nz(l.d_eng)),0);
   document.getElementById('ec-tiles').innerHTML=[
    ['Lignes à traiter',reels.length,'sur '+M.n_lignes+' lignes ('+zeros+' à zéro écartées)',reels.length?'alert':'ok'],
-   ['Enjeu financier',eur(dEng),'écart cumulé sur les engagements','alert'],
+   ['Enjeu financier',eurR(dEng),'écart cumulé sur les engagements','alert'],
    ['Écarts de date seuls',dates.length,'mandatements entre les deux photos',''],
    ['Budgets divergents',DATA.lignes.filter(l=>(l.statut||'').startsWith('Écart de budget')).length,
     'sur '+M.n_rappro+' lignes rapprochées','ok'],
