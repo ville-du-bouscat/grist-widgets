@@ -13,3 +13,8 @@
 *.xls
 *.xlsm
 *.ods
+
+# Secrets — jamais dans un dépôt public.
+.env
+.env.*
+!.env.example
