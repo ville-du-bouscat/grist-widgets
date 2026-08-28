@@ -8,8 +8,28 @@ comme **vues personnalisées** (« custom widgets »).
 | Widget | Objet | URL à coller dans Grist |
 |---|---|---|
 | `reconciliation-investissement` | Rapproche l'extraction comptable Grand Angle et le suivi opérationnel des services techniques | `https://ville-du-bouscat.github.io/grist-widgets/reconciliation-investissement/` |
+| `dysfonctionnements-synthese` | Tableau de bord, liste de travail et synthèse de comité pour le suivi des dysfonctionnements de la restauration scolaire | `https://ville-du-bouscat.github.io/grist-widgets/dysfonctionnements-synthese/` |
 
-Ouvert hors de Grist, ce widget affiche un jeu de démonstration **fictif** — voir l'avertissement ci-dessous.
+Ouverts hors de Grist, ces widgets affichent un jeu de démonstration **fictif** — voir l'avertissement ci-dessous.
+
+### `dysfonctionnements-synthese`
+
+Vue de lecture du document « Suivi dysfonctionnements restauration ». Trois onglets, un sélecteur
+d'année scolaire commun :
+
+- **Tableau de bord** — signalements, non résolus, retards, critiques, délai moyen, taux de
+  résolution ; répartition par mois, par catégorie, par office, par gravité et par statut.
+- **Suivi** — la liste de travail, triée par gravité puis par ancienneté, et le repérage des
+  récurrences (même office et même catégorie au moins trois fois).
+- **Comité de suivi** — une synthèse rédigée et imprimable sur l'année, le trimestre ou le mois.
+
+Le widget **ne connaît pas l'identité de l'agent et n'en a pas besoin** : les règles d'accès du
+document filtrent déjà les lignes qui lui parviennent. Un responsable d'office n'y voit donc que
+son office, sans qu'aucun filtre ne soit à poser dans la page.
+
+L'année scolaire est lue dans la colonne `Annee_scolaire` quand elle est renseignée, et recalculée
+depuis la date du constat sinon — bascule au 1er septembre. La nouvelle année scolaire est proposée
+dans le sélecteur même lorsqu'elle est vide : c'est l'espace vierge de la rentrée.
 
 ## ⚠ Ce dépôt est public — règle absolue
 

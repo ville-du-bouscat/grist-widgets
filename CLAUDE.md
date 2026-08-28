@@ -61,3 +61,28 @@ Noms de tables et adresse de secours de l'instance sont en tête du fichier HTML
 Servir le dépôt en statique et ouvrir la page dans un navigateur — Playwright et Chromium
 sont disponibles localement. Contrôler qu'il n'y a **aucune erreur console**, dans les deux
 thèmes clair et sombre.
+
+## Widget `dysfonctionnements-synthese`
+
+Vue de lecture du document « Suivi dysfonctionnements restauration » (restauration scolaire, DSP).
+
+Une seule table Grist, `Dysfonctionnements`. Colonnes utilisées : `Date_du_constat`, `Ecole`,
+`Office` (formule), `Categorie`, `Gravite`, `Description`, `Statut`, `Date_de_resolution`,
+`Annee_scolaire`. Le widget tolère un colId renommé grâce à `pick()`, qui essaie plusieurs noms.
+
+Points de conception à ne pas casser :
+
+- **Le widget n'identifie pas l'agent, et ne doit pas chercher à le faire.** Les règles d'accès du
+  document filtrent déjà `fetchTable` : un responsable ne reçoit que les lignes de son office. Tout
+  filtrage par identité ajouté dans la page serait redondant et donnerait une fausse impression de
+  sécurité — la sécurité est dans l'ACL, pas ici.
+- **L'année scolaire bascule au 1er septembre.** Elle est lue dans `Annee_scolaire` si la colonne est
+  renseignée, et recalculée depuis `Date_du_constat` sinon. Le sélecteur propose toujours l'année
+  courante, même vide, et l'année suivante à partir de juin : c'est ce qui donne l'« espace vierge »
+  de la rentrée sans dupliquer le document.
+- **Aucun graphique n'utilise de bibliothèque.** Le graphique mensuel est un SVG écrit à la main.
+  Ne pas introduire Chart.js ni aucun CDN : le dépôt est sans dépendance externe.
+- Seuils métier en tête de script : `SEUIL_RETARD` (7 jours) et `SEUIL_RECURRENCE` (3 occurrences).
+
+Le jeu de démonstration embarqué utilise des écoles inventées (FER, FERE, CUR, PAG, PRE, SEV) qui ne
+correspondent à aucun office réel. Ne jamais y substituer les codes de la commune.

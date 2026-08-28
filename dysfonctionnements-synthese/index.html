@@ -1,0 +1,739 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Synthèse des dysfonctionnements — widget Grist</title>
+<style>
+:root{
+  color-scheme: light;
+  --plane:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --ring:rgba(11,11,11,.10);
+  --track:#eceae4;
+  --accent:#2a78d6; --bar:#86b6ef; --bar2:#2a78d6;
+  --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --critical:#d03b3b;
+  --good-ink:#006300; --crit-ink:#a32626; --warn-ink:#8a6100;
+  --chip:#f0efec;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  color-scheme: dark;
+  --plane:#0d0d0d; --surface:#1a1a19; --ink:#fff; --ink2:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,.10);
+  --track:#2c2c2a;
+  --accent:#3987e5; --bar:#3987e5; --bar2:#9ec5f4;
+  --good-ink:#0ca30c; --crit-ink:#e66767; --warn-ink:#e0ac4a;
+  --chip:#262624;
+}}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --plane:#0d0d0d; --surface:#1a1a19; --ink:#fff; --ink2:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,.10);
+  --track:#2c2c2a;
+  --accent:#3987e5; --bar:#3987e5; --bar2:#9ec5f4;
+  --good-ink:#0ca30c; --crit-ink:#e66767; --warn-ink:#e0ac4a;
+  --chip:#262624;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--plane);color:var(--ink);
+ font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+ -webkit-text-size-adjust:100%}
+.wrap{max-width:1240px;margin:0 auto;padding:28px 20px 72px}
+header h1{font-size:1.5rem;margin:0 0 4px;letter-spacing:-.01em}
+.sub{color:var(--ink2);font-size:.9rem;margin:0}
+.banner{margin:18px 0 26px;padding:12px 16px;border-radius:10px;background:var(--surface);
+ border:1px solid var(--ring);font-size:.88rem;color:var(--ink2)}
+.banner b{color:var(--ink)}
+.status{display:flex;align-items:center;gap:9px;margin:0 0 18px;padding:9px 14px;border-radius:9px;
+ background:var(--surface);border:1px solid var(--ring);font-size:.83rem;color:var(--ink2)}
+.status .dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--muted)}
+.status.live .dot{background:var(--good)} .status.demo .dot{background:var(--warn)}
+.status.err .dot{background:var(--critical)} .status.err{color:var(--crit-ink)}
+.status b{color:var(--ink)}
+.status .re{margin-left:auto;font:inherit;font-size:.8rem;padding:4px 10px;border-radius:7px;
+ border:1px solid var(--axis);background:transparent;color:var(--ink2);cursor:pointer}
+.status .re:hover{background:var(--chip)}
+.periode{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:0 0 20px;padding:11px 14px;
+ border-radius:10px;background:var(--surface);border:1px solid var(--ring)}
+.periode label{font-size:.82rem;color:var(--ink2);display:inline-flex;align-items:center;gap:7px}
+.periode select{font:inherit;font-size:.88rem;padding:6px 10px;border-radius:8px;
+ border:1px solid var(--axis);background:var(--plane);color:var(--ink)}
+.periode .now{margin-left:auto;font-size:.78rem;color:var(--muted)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 20px;border-bottom:1px solid var(--grid)}
+.tab{appearance:none;border:0;background:transparent;color:var(--ink2);font:inherit;font-size:.92rem;
+ padding:10px 14px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+.tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.viewnote{font-size:.86rem;color:var(--ink2);margin:0 0 18px;max-width:70ch}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:12px;margin:0 0 24px}
+.tile{background:var(--surface);border:1px solid var(--ring);border-radius:10px;padding:14px 16px}
+.tile .k{font-size:.74rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 6px}
+.tile .v{font-size:1.55rem;font-weight:650;letter-spacing:-.02em;line-height:1.15;
+ font-variant-numeric:tabular-nums}
+.tile .n{font-size:.78rem;color:var(--ink2);margin-top:4px}
+.tile.ok .v{color:var(--good-ink)} .tile.alert .v{color:var(--crit-ink)}
+.tile.warn .v{color:var(--warn-ink)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin:0 0 22px}
+.panel{background:var(--surface);border:1px solid var(--ring);border-radius:10px;padding:15px 17px}
+.panel h3{margin:0 0 3px;font-size:.95rem}
+.panel .h-note{margin:0 0 14px;font-size:.78rem;color:var(--muted)}
+.hbars{display:flex;flex-direction:column;gap:9px}
+.hb{display:grid;grid-template-columns:minmax(84px,auto) 1fr 3.2em;gap:10px;align-items:center;
+ font-size:.83rem}
+.hb .lbl{color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hb .track{height:9px;border-radius:5px;background:var(--track);overflow:hidden}
+.hb .track i{display:block;height:100%;border-radius:5px;background:var(--bar)}
+.hb .val{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink);font-weight:600}
+.hb.crit .track i{background:var(--critical)}
+.hb.maj .track i{background:var(--serious)}
+.hb.min .track i{background:var(--bar)}
+.hb.res .track i{background:var(--good)}
+.hb.enc .track i{background:var(--bar2)}
+.hb.sig .track i{background:var(--warn)}
+.spark{width:100%;height:auto;aspect-ratio:480/130;display:block;overflow:visible}
+.spark .gl{stroke:var(--grid);stroke-width:1}
+.spark .bar{fill:var(--bar)}
+.spark .lb{fill:var(--muted);font-size:10px}
+.spark .vl{fill:var(--ink2);font-size:10px;font-variant-numeric:tabular-nums}
+.bar-ui{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px}
+.bar-ui input,.bar-ui select{font:inherit;font-size:.88rem;padding:7px 10px;border-radius:8px;
+ border:1px solid var(--axis);background:var(--surface);color:var(--ink);min-width:0}
+.bar-ui input[type=search]{flex:1 1 220px;max-width:100%}
+.bar-ui label{font-size:.82rem;color:var(--ink2)}
+.count{font-size:.82rem;color:var(--muted);margin-left:auto;flex:none}
+.card{background:var(--surface);border:1px solid var(--ring);border-radius:10px;overflow:hidden}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.85rem}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--grid);vertical-align:top}
+th{font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);
+ font-weight:600;white-space:nowrap;position:sticky;top:0;background:var(--surface);z-index:1}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--chip)}
+.mono{font-variant-numeric:tabular-nums;font-size:.8rem;color:var(--ink2);white-space:nowrap}
+.desc{max-width:52ch;color:var(--ink2)}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:.75rem;padding:2px 9px;
+ border-radius:999px;background:var(--chip);color:var(--ink2);white-space:nowrap}
+.pill.ok{color:var(--good-ink)} .pill.crit{color:var(--crit-ink)}
+.pill.warn{color:var(--serious)}
+.dot{width:7px;height:7px;border-radius:50%;flex:none}
+.dot.ok{background:var(--good)} .dot.crit{background:var(--critical)}
+.dot.warn{background:var(--warn)} .dot.maj{background:var(--serious)}
+.empty{padding:32px;text-align:center;color:var(--muted);font-size:.88rem}
+.empty b{display:block;color:var(--ink2);font-size:.95rem;margin-bottom:6px}
+.rec{display:flex;flex-direction:column;gap:0}
+.rec .r{display:flex;gap:12px;align-items:baseline;padding:10px 14px;border-bottom:1px solid var(--grid);
+ font-size:.86rem}
+.rec .r:last-child{border-bottom:0}
+.rec .r .n{font-weight:650;font-variant-numeric:tabular-nums;min-width:2.2em}
+.rec .r .w{color:var(--ink2);font-size:.8rem;margin-left:auto;text-align:right}
+.print-btn{appearance:none;font:inherit;font-size:.85rem;padding:7px 14px;border-radius:8px;
+ border:1px solid var(--axis);background:var(--surface);color:var(--ink);cursor:pointer}
+.print-btn:hover{background:var(--chip)}
+.rapport{background:var(--surface);border:1px solid var(--ring);border-radius:10px;padding:24px 26px}
+.rapport h2{font-size:1.15rem;margin:0 0 4px}
+.rapport .meta{font-size:.82rem;color:var(--muted);margin:0 0 20px}
+.rapport h3{font-size:.92rem;margin:22px 0 8px;padding-top:14px;border-top:1px solid var(--grid)}
+.rapport h3:first-of-type{border-top:0;padding-top:0;margin-top:18px}
+.rapport p{font-size:.9rem;color:var(--ink2);margin:0 0 10px;max-width:78ch}
+.rapport p b{color:var(--ink)}
+.rapport ul{margin:0 0 10px;padding-left:20px;font-size:.88rem;color:var(--ink2)}
+.rapport li{margin-bottom:4px}
+footer{margin-top:34px;font-size:.8rem;color:var(--muted);max-width:78ch}
+footer b{color:var(--ink2)}
+body.in-grist .wrap{padding-top:14px}
+body.in-grist header,body.in-grist .banner,body.in-grist footer{display:none}
+@media (max-width:640px){
+ .wrap{padding:20px 14px 60px} .tile .v{font-size:1.3rem}
+ .desc{max-width:22ch} .periode{gap:10px}
+}
+@media print{
+ body{background:#fff;color:#000}
+ .status,.tabs,.periode,.print-btn,.banner,footer,.bar-ui{display:none!important}
+ .wrap{max-width:none;padding:0}
+ .rapport{border:0;padding:0}
+ [role=tabpanel][hidden]{display:none!important}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+ <h1>Suivi des dysfonctionnements — restauration scolaire</h1>
+ <p class="sub">Synthèse du suivi contradictoire avec le délégataire</p>
+</header>
+
+<div class="banner">
+ <b>Saisir dans Grist, lire ici.</b> Les offices signalent par le formulaire Grist&nbsp;; cette page
+ ne fait que relire ce qui a été saisi et le mettre en forme — état des signalements, récurrences,
+ et la synthèse à présenter en comité de suivi. Hors de Grist, elle affiche un jeu fictif.
+</div>
+
+<div class="status" id="status"><i class="dot"></i><span id="status-txt">Initialisation…</span><button class="re" id="reload" hidden>Recharger</button></div>
+
+<div class="periode">
+ <label>Année scolaire
+  <select id="p-annee"></select>
+ </label>
+ <label>Office
+  <select id="p-office"></select>
+ </label>
+ <span class="now" id="p-now"></span>
+</div>
+
+<div class="tabs" role="tablist">
+ <button class="tab" role="tab" id="t-db" aria-selected="true" aria-controls="v-db">Tableau de bord</button>
+ <button class="tab" role="tab" id="t-su" aria-selected="false" aria-controls="v-su">Suivi</button>
+ <button class="tab" role="tab" id="t-co" aria-selected="false" aria-controls="v-co">Comité de suivi</button>
+</div>
+
+<section id="v-db" role="tabpanel" aria-labelledby="t-db">
+ <p class="viewnote">L'état de l'année scolaire en cours, d'un coup d'œil. Une catégorie qui remonte
+ mois après mois est un sujet de comité&nbsp;; un signalement isolé n'en est pas un.</p>
+ <div class="tiles" id="db-tiles"></div>
+ <div class="grid2">
+  <div class="panel">
+   <h3>Signalements par mois</h3>
+   <p class="h-note">De septembre à août — la saisonnalité se lit d'elle-même.</p>
+   <svg class="spark" id="db-mois" role="img" aria-label="Signalements par mois"></svg>
+  </div>
+  <div class="panel">
+   <h3>Par catégorie</h3>
+   <p class="h-note">Ce sur quoi porte réellement le contradictoire.</p>
+   <div class="hbars" id="db-cat"></div>
+  </div>
+  <div class="panel">
+   <h3>Par office</h3>
+   <p class="h-note">Un écart fort entre offices se lit autant comme un écart de service que de saisie.</p>
+   <div class="hbars" id="db-off"></div>
+  </div>
+  <div class="panel">
+   <h3>Gravité et avancement</h3>
+   <p class="h-note">La gravité vient du signalement, le statut du traitement.</p>
+   <div class="hbars" id="db-grav" style="margin-bottom:16px"></div>
+   <div class="hbars" id="db-stat"></div>
+  </div>
+ </div>
+</section>
+
+<section id="v-su" role="tabpanel" aria-labelledby="t-su" hidden>
+ <p class="viewnote">La liste de travail. Par défaut, ce qui n'est pas résolu, le plus grave et le plus
+ ancien en tête. Un signalement est dit en retard au-delà de sept jours sans résolution.</p>
+ <div class="bar-ui">
+  <label>Afficher <select id="su-f">
+   <option value="ouvert">À traiter</option>
+   <option value="retard">En retard seulement</option>
+   <option value="critique">Critiques seulement</option>
+   <option value="tous">Tous les signalements</option>
+  </select></label>
+  <input type="search" id="su-q" placeholder="Rechercher un mot, une école, une catégorie…" aria-label="Rechercher">
+  <span class="count" id="su-count"></span>
+ </div>
+ <div class="card scroll"><table id="su-tbl"><thead><tr>
+  <th>Date</th><th>École</th><th>Catégorie</th><th>Gravité</th><th>Description</th>
+  <th>Statut</th><th class="num">Âge</th>
+ </tr></thead><tbody></tbody></table><div class="empty" id="su-empty" hidden></div></div>
+
+ <div class="panel" style="margin-top:22px">
+  <h3>Récurrences</h3>
+  <p class="h-note">Même office et même catégorie, au moins trois fois sur l'année retenue.
+  C'est ce qui fonde une demande d'action corrective auprès du délégataire.</p>
+  <div class="rec" id="su-rec"></div>
+ </div>
+</section>
+
+<section id="v-co" role="tabpanel" aria-labelledby="t-co" hidden>
+ <div class="bar-ui">
+  <label>Période <select id="co-per">
+   <option value="annee">Toute l'année scolaire</option>
+   <option value="trim">Les trois derniers mois</option>
+   <option value="mois">Le dernier mois</option>
+  </select></label>
+  <button class="print-btn" id="co-print">Imprimer</button>
+ </div>
+ <div class="rapport" id="co-rapport"></div>
+</section>
+
+<footer>
+ <b>Widget Grist, en lecture seule.</b> À ajouter comme vue personnalisée dans le document
+ « Suivi dysfonctionnements restauration »&nbsp;: il y lit la table <code>Dysfonctionnements</code>
+ et n'écrit rien. Chacun n'y voit que ce que les règles d'accès du document l'autorisent à voir.
+ Ouvert hors de Grist, il n'affiche qu'un jeu de démonstration inventé. — Ville du Bouscat.
+</footer>
+</div>
+<script>
+/* =====================================================================
+   Widget Grist — Synthèse des dysfonctionnements (restauration scolaire)
+   ---------------------------------------------------------------------
+   Deux modes, automatiques :
+     • ouvert dans Grist  -> lit en direct la table du document
+     • ouvert seul (double-clic) -> affiche le jeu de démonstration embarqué
+   L'API Grist est chargée depuis l'instance qui affiche le widget
+   (déduite du référent), donc aucune dépendance à un serveur tiers.
+
+   LECTURE SEULE. Le seul appel à Grist est un fetchTable. Le widget ne
+   connaît pas l'identité de l'agent et n'en a pas besoin : les règles
+   d'accès du document filtrent déjà les lignes qui lui parviennent.
+   ===================================================================== */
+
+const TABLE = 'Dysfonctionnements';
+const GRIST_URL_MANUEL = "";   // ex. "https://grist.numerique.gouv.fr" si le référent est masqué
+const SEUIL_RETARD = 7;        // jours sans résolution avant d'être dit « en retard »
+const SEUIL_RECURRENCE = 3;    // occurrences office x catégorie qui font une récurrence
+
+const MOIS_COURTS = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+/* L'année scolaire commence en septembre : ordre d'affichage des mois. */
+const ORDRE_MOIS = [8,9,10,11,0,1,2,3,4,5,6,7];
+
+/* ---------- utilitaires ---------- */
+const esc = s => String(s??'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const jour = 86400000;
+
+function toDate(v){
+  if(v===null||v===undefined||v==='') return null;
+  // Grist renvoie une colonne Date en secondes depuis l'époque, à minuit UTC.
+  if(typeof v==='number') return new Date(v*1000);
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? null : d;
+}
+const fmtDate = d => d ? String(d.getUTCDate()).padStart(2,'0')+'/'
+  +String(d.getUTCMonth()+1).padStart(2,'0')+'/'+d.getUTCFullYear() : '—';
+const jours = (a,b) => Math.round((b-a)/jour);
+
+/* Année scolaire d'une date : bascule au 1er septembre. */
+function anneeScolaire(d){
+  if(!d) return '';
+  const y = d.getUTCFullYear();
+  return d.getUTCMonth() >= 8 ? y+'-'+(y+1) : (y-1)+'-'+y;
+}
+function anneeCourante(){ return anneeScolaire(new Date()); }
+
+/* Première valeur non vide parmi plusieurs identifiants de colonne possibles :
+   le widget survit à un colId qui aurait été renommé dans le document. */
+function pick(r, ...noms){
+  for(const n of noms){ const v = r[n]; if(v!==undefined && v!==null && v!=='') return v; }
+  return '';
+}
+
+/* ---------- jeu de démonstration — ENTIÈREMENT FICTIF ----------
+   Écoles, descriptions et dates sont inventées. Aucune donnée de la commune
+   ne doit figurer ici : ce dépôt est public. */
+const ECOLES_DEMO = { FER:'FER', FERE:'FER', CUR:'CUR', PAG:'PAG', PRE:'PRE', SEV:'SEV' };
+const DEMO = [
+ ['2025-09-12','FER','Laitage','Mineur','Yaourts nature manquants pour 18 couverts','Résolu','2025-09-16'],
+ ['2025-09-15','CUR','Température','Majeur','Plat protidique livré à 8 °C, relevé contradictoire fait','Résolu','2025-09-18'],
+ ['2025-09-22','PAG','Quantités','Mineur','Accompagnement en quantité insuffisante sur le second service','Résolu','2025-09-29'],
+ ['2025-09-30','FERE','Livraison','Majeur','Livraison arrivée à 11h40, service décalé de vingt minutes','Résolu','2025-10-06'],
+ ['2025-10-03','SEV','Plat','Mineur','Plat annoncé au menu remplacé sans information préalable','Résolu','2025-10-09'],
+ ['2025-10-07','CUR','Température','Majeur','Entrée servie à température non conforme','Résolu','2025-10-13'],
+ ['2025-10-14','PRE','Hygiène','Critique','Corps étranger signalé dans une barquette, retirée du service','Résolu','2025-10-15'],
+ ['2025-10-16','FER','Quantités','Mineur','Pain en nombre insuffisant sur le service du jour','Résolu','2025-10-22'],
+ ['2025-11-04','CUR','Température','Majeur','Troisième relevé non conforme sur le mois','Résolu','2025-11-12'],
+ ['2025-11-06','PAG','Dessert','Mineur','Dessert non conforme au menu affiché aux familles','Résolu','2025-11-13'],
+ ['2025-11-13','SEV','Étiquetage','Majeur','Barquette sans étiquette de date limite de consommation','Résolu','2025-11-17'],
+ ['2025-11-18','FERE','Livraison','Mineur','Bon de livraison incomplet, deux lignes non renseignées','Résolu','2025-11-25'],
+ ['2025-11-25','PRE','Végé','Mineur','Repas sans viande non prévu en nombre suffisant','Résolu','2025-12-02'],
+ ['2025-12-02','CUR','Température','Critique','Rupture de la chaîne du froid constatée à la réception','Résolu','2025-12-03'],
+ ['2025-12-09','FER','Laitage','Mineur','Fromage manquant sur la totalité du second service','Résolu','2025-12-16'],
+ ['2025-12-11','PAG','Quantités','Mineur','Portions de féculents sous-évaluées','Résolu','2025-12-18'],
+ ['2026-01-08','SEV','Plat','Majeur','Plat de substitution servi sans information des familles','Résolu','2026-01-15'],
+ ['2026-01-13','PRE','Hygiène','Majeur','État de propreté du matériel de service insuffisant','Résolu','2026-01-20'],
+ ['2026-01-15','CUR','Température','Majeur','Relevé non conforme, quatrième du trimestre','Résolu','2026-01-26'],
+ ['2026-01-20','FER','Entrée','Mineur','Entrée livrée en quantité inférieure au bon de commande','Résolu','2026-01-27'],
+ ['2026-02-03','FERE','Livraison','Mineur','Retard de livraison de trente minutes','Résolu','2026-02-10'],
+ ['2026-02-05','PAG','Quantités','Majeur','Manque constaté sur deux services consécutifs','Résolu','2026-02-16'],
+ ['2026-02-10','SEV','Étiquetage','Mineur','Étiquette illisible sur trois barquettes','Résolu','2026-02-17'],
+ ['2026-03-03','CUR','Température','Majeur','Relevé non conforme à la réception','En cours de traitement',''],
+ ['2026-03-10','PRE','Goûter','Mineur','Goûter non livré pour le centre de loisirs','Résolu','2026-03-16'],
+ ['2026-03-12','FER','Laitage','Mineur','Yaourts manquants, troisième fois sur l’année','Récurrent',''],
+ ['2026-03-17','PAG','Quantités','Majeur','Quantités insuffisantes, quatrième signalement','Récurrent',''],
+ ['2026-03-24','SEV','Salade','Mineur','Salade présentée flétrie, non servie','Résolu','2026-03-30'],
+ ['2026-04-02','FERE','Pain','Mineur','Pain livré rassis','Résolu','2026-04-08'],
+ ['2026-04-07','CUR','Hygiène','Critique','Non-conformité relevée lors du contrôle du service','En cours de traitement',''],
+ ['2026-04-14','PRE','Végé','Mineur','Alternative végétarienne absente du service','Résolu','2026-04-21'],
+ ['2026-04-16','FER','Accompagnement','Mineur','Légumes non conformes au grammage annoncé','Résolu','2026-04-23'],
+ ['2026-05-05','PAG','Quantités','Majeur','Manque récurrent malgré le rappel du mois précédent','Signalé',''],
+ ['2026-05-07','SEV','Plat','Mineur','Substitution non signalée','Signalé',''],
+ ['2026-05-12','CUR','Température','Critique','Relevé très en deçà du seuil, plat retiré du service','En cours de traitement',''],
+ ['2026-05-19','FERE','Livraison','Mineur','Livraison partielle, complément arrivé après le service','Signalé',''],
+ ['2026-05-26','PRE','Dessert','Mineur','Dessert non conforme au menu','Signalé',''],
+ ['2026-06-02','FER','Laitage','Mineur','Fromage manquant, quatrième occurrence','Récurrent',''],
+ ['2026-06-04','PAG','Étiquetage','Mineur','Date limite absente sur une barquette','Signalé',''],
+ ['2026-06-09','SEV','Hygiène','Majeur','Propreté des chariots de service insuffisante','Signalé',''],
+ ['2026-06-11','CUR','Température','Majeur','Relevé non conforme, sixième de l’année','Signalé',''],
+ ['2026-06-16','PRE','Quantités','Mineur','Portions insuffisantes sur le second service','Signalé',''],
+];
+function jeuDemo(){
+  return DEMO.map(([d,ec,cat,gr,desc,st,dr]) => ({
+    date: toDate(d), ecole: ec, office: ECOLES_DEMO[ec] || ec, categorie: cat,
+    gravite: gr, description: desc, statut: st, dateRes: toDate(dr),
+    traitement: '', annee: anneeScolaire(toDate(d)),
+  }));
+}
+
+/* ---------- normalisation d'une ligne Grist ---------- */
+function toRows(t){
+  // fetchTable renvoie les colonnes en parallèle : {id:[…], Ecole:[…], …}
+  const cles = Object.keys(t), n = (t.id||[]).length, out = [];
+  for(let i=0;i<n;i++){ const o={}; for(const k of cles) o[k]=t[k][i]; out.push(o); }
+  return out;
+}
+function normaliser(r){
+  const date = toDate(pick(r,'Date_du_constat','Date_constat','Date'));
+  const ecole = String(pick(r,'Ecole','École')||'');
+  const office = String(pick(r,'Office')||'');
+  const annee = String(pick(r,'Annee_scolaire','Annee','Année_scolaire')||'') || anneeScolaire(date);
+  return {
+    date, ecole, office: office || ecole, categorie: String(pick(r,'Categorie','Catégorie')||''),
+    gravite: String(pick(r,'Gravite','Gravité')||''),
+    description: String(pick(r,'Description')||''),
+    statut: String(pick(r,'Statut')||''),
+    dateRes: toDate(pick(r,'Date_de_resolution','Date_resolution')),
+    traitement: String(pick(r,'Traitement')||''),
+    annee,
+  };
+}
+
+/* ---------- état ---------- */
+let TOUT = [];          // toutes les lignes reçues, normalisées
+let VUE = [];           // lignes de l'année et de l'office retenus
+const aujourdhui = new Date();
+
+const estOuvert = l => l.statut !== 'Résolu';
+const estRetard = l => estOuvert(l) && l.date && jours(l.date, aujourdhui) > SEUIL_RETARD;
+const age = l => l.date ? jours(l.date, l.dateRes || aujourdhui) : null;
+
+/* ---------- sélecteurs de période ---------- */
+function anneesDisponibles(){
+  const s = new Set(TOUT.map(l=>l.annee).filter(Boolean));
+  s.add(anneeCourante());
+  // À partir de juin, on propose déjà l'année suivante : elle est vide, et c'est
+  // exactement ce qu'on veut voir avant la rentrée.
+  if(aujourdhui.getMonth() >= 5){
+    const y = Number(anneeCourante().slice(0,4)) + 1;
+    s.add(y+'-'+(y+1));
+  }
+  return [...s].sort().reverse();
+}
+function remplirSelecteurs(){
+  const sa = document.getElementById('p-annee'), avant = sa.value;
+  const annees = anneesDisponibles();
+  sa.innerHTML = annees.map(a=>`<option value="${esc(a)}">${esc(a)}</option>`).join('');
+  sa.value = annees.includes(avant) ? avant
+           : (annees.includes(anneeCourante()) ? anneeCourante() : annees[0] || '');
+
+  const so = document.getElementById('p-office'), avantO = so.value;
+  const offices = [...new Set(TOUT.filter(l=>l.annee===sa.value).map(l=>l.office).filter(Boolean))].sort();
+  so.innerHTML = '<option value="">Tous les offices</option>'
+    + offices.map(o=>`<option value="${esc(o)}">${esc(o)}</option>`).join('');
+  so.value = offices.includes(avantO) ? avantO : '';
+  so.disabled = offices.length < 2;
+}
+function appliquerFiltres(){
+  const a = document.getElementById('p-annee').value;
+  const o = document.getElementById('p-office').value;
+  VUE = TOUT.filter(l => l.annee===a && (!o || l.office===o));
+  document.getElementById('p-now').textContent =
+    VUE.length + ' signalement' + (VUE.length>1?'s':'') + ' sur la période';
+}
+
+/* ---------- agrégations ---------- */
+function compter(lignes, cle){
+  const m = new Map();
+  for(const l of lignes){ const k = l[cle] || '—'; m.set(k, (m.get(k)||0)+1); }
+  return [...m.entries()].sort((x,y)=>y[1]-x[1]);
+}
+function recurrences(lignes){
+  const m = new Map();
+  for(const l of lignes){
+    if(!l.office || !l.categorie) continue;
+    const k = l.office+' — '+l.categorie;
+    const e = m.get(k) || {n:0, ouverts:0, dernier:null};
+    e.n++; if(estOuvert(l)) e.ouverts++;
+    if(!e.dernier || (l.date && l.date > e.dernier)) e.dernier = l.date;
+    m.set(k, e);
+  }
+  return [...m.entries()].filter(([,e])=>e.n>=SEUIL_RECURRENCE).sort((a,b)=>b[1].n-a[1].n);
+}
+function delaiMoyen(lignes){
+  const d = lignes.filter(l=>l.dateRes && l.date).map(l=>jours(l.date,l.dateRes));
+  return d.length ? Math.round(d.reduce((a,b)=>a+b,0)/d.length) : null;
+}
+
+/* ---------- petits rendus ---------- */
+function barres(cible, paires, classe){
+  const el = document.getElementById(cible);
+  if(!paires.length){ el.innerHTML = '<p class="h-note" style="margin:0">Aucune donnée.</p>'; return; }
+  const max = Math.max(...paires.map(p=>p[1]));
+  el.innerHTML = paires.map(([k,v])=>{
+    const c = typeof classe === 'function' ? classe(k) : (classe||'');
+    return `<div class="hb ${c}"><span class="lbl" title="${esc(k)}">${esc(k)}</span>`
+      + `<span class="track"><i style="width:${Math.round(v/max*100)}%"></i></span>`
+      + `<span class="val">${v}</span></div>`;
+  }).join('');
+}
+function pillGravite(g){
+  if(g==='Critique') return '<span class="pill crit"><i class="dot crit"></i>Critique</span>';
+  if(g==='Majeur')   return '<span class="pill warn"><i class="dot maj"></i>Majeur</span>';
+  if(g==='Mineur')   return '<span class="pill">Mineur</span>';
+  return '<span class="pill">—</span>';
+}
+function pillStatut(s){
+  if(s==='Résolu')    return '<span class="pill ok"><i class="dot ok"></i>Résolu</span>';
+  if(s==='Récurrent') return '<span class="pill crit"><i class="dot crit"></i>Récurrent</span>';
+  if(s==='Signalé')   return '<span class="pill warn"><i class="dot warn"></i>Signalé</span>';
+  return '<span class="pill">'+esc(s||'—')+'</span>';
+}
+
+/* ---------- graphique mensuel (SVG, sans dépendance) ---------- */
+function graphMois(lignes){
+  const svg = document.getElementById('db-mois');
+  const par = new Array(12).fill(0);
+  for(const l of lignes) if(l.date) par[l.date.getUTCMonth()]++;
+  const vals = ORDRE_MOIS.map(m=>par[m]);
+  const max = Math.max(1, ...vals);
+  const W = 480, H = 130, base = 100, largeur = W/12;
+  let out = '';
+  for(let i=0;i<4;i++){
+    const y = base - i*(base-12)/3;
+    out += `<line class="gl" x1="0" y1="${y}" x2="${W}" y2="${y}" vector-effect="non-scaling-stroke"/>`;
+  }
+  vals.forEach((v,i)=>{
+    const h = v ? Math.max(2, v/max*(base-22)) : 0;
+    const x = i*largeur + largeur*0.18, w = largeur*0.64;
+    if(h) out += `<rect class="bar" x="${x}" y="${base-h}" width="${w}" height="${h}" rx="2"/>`;
+    if(v) out += `<text class="vl" x="${x+w/2}" y="${base-h-4}" text-anchor="middle">${v}</text>`;
+    out += `<text class="lb" x="${x+w/2}" y="${base+14}" text-anchor="middle">`
+        + esc(MOIS_COURTS[ORDRE_MOIS[i]].replace('.','')) + '</text>';
+  });
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.innerHTML = out;
+}
+
+/* ---------- onglet 1 : tableau de bord ---------- */
+function rendreDashboard(){
+  const L = VUE;
+  const ouverts = L.filter(estOuvert), retards = L.filter(estRetard);
+  const crit = L.filter(l=>l.gravite==='Critique');
+  const critOuv = crit.filter(estOuvert);
+  const resolus = L.filter(l=>l.statut==='Résolu');
+  const dm = delaiMoyen(L);
+  const taux = L.length ? Math.round(resolus.length/L.length*100) : null;
+
+  document.getElementById('db-tiles').innerHTML = [
+   ['Signalements', String(L.length), 'sur l’année retenue', ''],
+   ['Non résolus', String(ouverts.length), L.length? Math.round(ouverts.length/L.length*100)+' % du total':'', ouverts.length?'warn':'ok'],
+   ['En retard', String(retards.length), 'plus de '+SEUIL_RETARD+' jours sans résolution', retards.length?'alert':'ok'],
+   ['Critiques', String(crit.length), critOuv.length? critOuv.length+' encore ouvert'+(critOuv.length>1?'s':''):'tous soldés', crit.length?'alert':'ok'],
+   ['Délai moyen', dm===null?'—':dm+' j', 'du constat à la résolution', ''],
+   ['Taux de résolution', taux===null?'—':taux+' %', resolus.length+' signalement'+(resolus.length>1?'s':'')+' soldé'+(resolus.length>1?'s':''), taux>=80?'ok':''],
+  ].map(([k,v,n,c])=>`<div class="tile ${c}"><p class="k">${esc(k)}</p><div class="v">${esc(v)}</div><p class="n">${esc(n)}</p></div>`).join('');
+
+  graphMois(L);
+  barres('db-cat', compter(L,'categorie').slice(0,9));
+  barres('db-off', compter(L,'office'));
+  barres('db-grav', ['Critique','Majeur','Mineur'].map(g=>[g, L.filter(l=>l.gravite===g).length])
+    .filter(p=>p[1]), g=>({Critique:'crit',Majeur:'maj',Mineur:'min'}[g]||''));
+  barres('db-stat', ['Signalé','En cours de traitement','Récurrent','Résolu']
+    .map(s=>[s, L.filter(l=>l.statut===s).length]).filter(p=>p[1]),
+    s=>({'Signalé':'sig','En cours de traitement':'enc','Récurrent':'crit','Résolu':'res'}[s]||''));
+}
+
+/* ---------- onglet 2 : suivi ---------- */
+const RANG_GRAVITE = {Critique:0, Majeur:1, Mineur:2, '':3};
+function rendreSuivi(){
+  const f = document.getElementById('su-f').value;
+  const q = document.getElementById('su-q').value.trim().toLowerCase();
+  let L = VUE.slice();
+  if(f==='ouvert')   L = L.filter(estOuvert);
+  if(f==='retard')   L = L.filter(estRetard);
+  if(f==='critique') L = L.filter(l=>l.gravite==='Critique');
+  if(q) L = L.filter(l=>(l.ecole+' '+l.categorie+' '+l.description+' '+l.statut+' '+l.office)
+    .toLowerCase().includes(q));
+  L.sort((a,b)=>(RANG_GRAVITE[a.gravite]??3)-(RANG_GRAVITE[b.gravite]??3)
+    || (a.date?.getTime()||0)-(b.date?.getTime()||0));
+
+  document.getElementById('su-count').textContent = L.length+' ligne'+(L.length>1?'s':'');
+  const tb = document.querySelector('#su-tbl tbody');
+  tb.innerHTML = L.map(l=>{
+    const a = age(l), tard = estRetard(l);
+    return `<tr>
+      <td class="mono">${fmtDate(l.date)}</td>
+      <td>${esc(l.ecole)}</td>
+      <td>${esc(l.categorie||'—')}</td>
+      <td>${pillGravite(l.gravite)}</td>
+      <td class="desc">${esc(l.description)}</td>
+      <td>${pillStatut(l.statut)}</td>
+      <td class="num"${tard?' style="color:var(--crit-ink);font-weight:600"':''}>${a===null?'—':a+' j'}</td>
+    </tr>`;
+  }).join('');
+
+  const vide = document.getElementById('su-empty');
+  document.querySelector('#su-tbl').hidden = !L.length;
+  vide.hidden = !!L.length;
+  if(!L.length) vide.innerHTML = VUE.length
+    ? '<b>Rien sur ce filtre.</b>Tout est soldé sur ce périmètre, ou la recherche ne renvoie rien.'
+    : '<b>Aucun signalement sur cette année scolaire.</b>L’année démarre — la liste se remplira à la première saisie.';
+
+  const rec = recurrences(VUE);
+  const el = document.getElementById('su-rec');
+  el.innerHTML = rec.length ? rec.map(([k,e])=>`<div class="r">
+      <span class="n">${e.n}</span>
+      <span>${esc(k)}</span>
+      <span class="w">${e.ouverts? e.ouverts+' encore ouvert'+(e.ouverts>1?'s':'') : 'tous soldés'}
+        · dernier le ${fmtDate(e.dernier)}</span>
+    </div>`).join('')
+    : '<p class="h-note" style="margin:0">Aucune situation répétée au moins '
+      +SEUIL_RECURRENCE+' fois sur la période.</p>';
+}
+
+/* ---------- onglet 3 : comité de suivi ---------- */
+function rendreComite(){
+  const per = document.getElementById('co-per').value;
+  let L = VUE, depuis = null;
+  if(per!=='annee'){
+    const n = per==='trim' ? 90 : 30;
+    depuis = new Date(aujourdhui.getTime() - n*jour);
+    L = VUE.filter(l=>l.date && l.date >= depuis);
+  }
+  const annee = document.getElementById('p-annee').value;
+  const office = document.getElementById('p-office').value;
+  const ouverts = L.filter(estOuvert), retards = L.filter(estRetard);
+  const crit = L.filter(l=>l.gravite==='Critique');
+  const dm = delaiMoyen(L);
+  const cats = compter(L,'categorie'), offs = compter(L,'office');
+  const rec = recurrences(L);
+  const critOuv = crit.filter(estOuvert);
+
+  const periodeTxt = per==='annee' ? 'année scolaire '+esc(annee)
+    : (per==='trim' ? 'trois derniers mois' : 'dernier mois')
+      + ' (depuis le '+fmtDate(depuis)+')';
+
+  let h = `<h2>Suivi des dysfonctionnements — restauration scolaire</h2>
+    <p class="meta">Période : ${periodeTxt}${office?' · office '+esc(office):' · tous offices'}
+      · édité le ${fmtDate(new Date(Date.UTC(aujourdhui.getFullYear(),aujourdhui.getMonth(),aujourdhui.getDate())))}</p>`;
+
+  if(!L.length){
+    h += `<p>Aucun signalement n’a été enregistré sur la période retenue.</p>`;
+    document.getElementById('co-rapport').innerHTML = h; return;
+  }
+
+  h += `<h3>Ce que disent les chiffres</h3><p>
+    <b>${L.length}</b> signalement${L.length>1?'s':''} sur la période, dont
+    <b>${ouverts.length}</b> non résolu${ouverts.length>1?'s':''} à ce jour et
+    <b>${retards.length}</b> au-delà de ${SEUIL_RETARD} jours.
+    ${crit.length? '<b>'+crit.length+'</b> relève'+(crit.length>1?'nt':'')+' de la gravité critique.'
+      : 'Aucun n’a été qualifié de critique.'}
+    ${dm!==null? 'Le délai moyen entre le constat et la résolution s’établit à <b>'+dm+' jours</b>.'
+      : 'Aucune résolution datée ne permet encore de calculer un délai moyen.'}
+  </p>`;
+
+  h += `<h3>Les sujets qui reviennent</h3>`;
+  h += cats.length ? '<ul>'+cats.slice(0,5).map(([k,v])=>
+      `<li><b>${esc(k)}</b> — ${v} signalement${v>1?'s':''}</li>`).join('')+'</ul>'
+    : '<p>Aucune catégorie renseignée.</p>';
+
+  h += `<h3>Répartition par office</h3>`;
+  h += '<ul>'+offs.map(([k,v])=>`<li><b>${esc(k)}</b> — ${v} signalement${v>1?'s':''}`
+      + (L.filter(l=>l.office===k&&estOuvert(l)).length
+        ? ', dont '+L.filter(l=>l.office===k&&estOuvert(l)).length+' non résolu(s)' : '')
+      + '</li>').join('')+'</ul>';
+
+  h += `<h3>Situations répétées</h3>`;
+  h += rec.length
+    ? '<p>Les situations suivantes se sont produites au moins '+SEUIL_RECURRENCE
+      +' fois sur la période. Elles appellent une action corrective du délégataire, et non un traitement au cas par cas.</p><ul>'
+      + rec.map(([k,e])=>`<li><b>${esc(k)}</b> — ${e.n} occurrences, dernière le ${fmtDate(e.dernier)}`
+        + (e.ouverts? ', '+e.ouverts+' encore ouverte(s)':'')+'</li>').join('')+'</ul>'
+    : '<p>Aucune situation ne s’est répétée '+SEUIL_RECURRENCE+' fois ou plus sur la période.</p>';
+
+  if(critOuv.length){
+    h += `<h3>Points critiques encore ouverts</h3><ul>`
+      + critOuv.map(l=>`<li>${fmtDate(l.date)} — <b>${esc(l.ecole)}</b>, ${esc(l.categorie)} : ${esc(l.description)}</li>`).join('')
+      + '</ul>';
+  }
+
+  h += `<h3>Réserve de lecture</h3><p>Ces chiffres comptent des signalements, non des repas.
+    Une hausse peut traduire une dégradation du service comme une meilleure appropriation de l’outil
+    par les offices — les deux se distinguent en regardant la répartition par office et par catégorie,
+    pas le total.</p>`;
+
+  document.getElementById('co-rapport').innerHTML = h;
+}
+
+/* ---------- orchestration ---------- */
+function rendreTout(){
+  remplirSelecteurs();
+  appliquerFiltres();
+  rendreDashboard();
+  rendreSuivi();
+  rendreComite();
+}
+function setStatus(cls, html, montrerRecharger){
+  const el = document.getElementById('status');
+  el.className = 'status' + (cls? ' '+cls : '');
+  document.getElementById('status-txt').innerHTML = html;
+  document.getElementById('reload').hidden = !montrerRecharger;
+}
+
+/* ---------- connexion à Grist ---------- */
+function chargerScript(url){
+  return new Promise((ok,ko)=>{ const s=document.createElement('script');
+    s.src=url; s.onload=ok; s.onerror=()=>ko(new Error(url)); document.head.appendChild(s); });
+}
+function origineGrist(){
+  if(GRIST_URL_MANUEL) return GRIST_URL_MANUEL.replace(/\/$/,'');
+  try { if(document.referrer) return new URL(document.referrer).origin; } catch(e){}
+  return null;
+}
+async function bootGrist(){
+  if(window.self===window.top) return false;          // pas dans un cadre -> mode démo
+  const origine = origineGrist();
+  if(!origine) throw new Error("instance Grist introuvable (référent masqué) — renseigner GRIST_URL_MANUEL");
+  document.body.classList.add('in-grist');
+  setStatus('', 'Connexion à <b>'+esc(origine)+'</b>…', false);
+  await chargerScript(origine+'/grist-plugin-api.js');
+  if(!window.grist) throw new Error("l'API Grist ne s'est pas chargée");
+  grist.ready({ requiredAccess:'full' });             // lecture de la table entière, hors filtres de vue
+  await rafraichir();
+  grist.onRecords(()=>rafraichir());                  // resaisie -> réaffichage
+  return true;
+}
+async function rafraichir(){
+  const t = await grist.docApi.fetchTable(TABLE);
+  TOUT = toRows(t).map(normaliser).filter(l=>l.date || l.ecole);
+  rendreTout();
+  setStatus('live','<b>Connecté à Grist</b> — '+TOUT.length+' signalement'+(TOUT.length>1?'s':'')
+    +' lisible'+(TOUT.length>1?'s':'')+' avec vos droits sur la table <code>'+esc(TABLE)+'</code>.', true);
+}
+
+/* ---------- interactions ---------- */
+const tabs = [...document.querySelectorAll('.tab')];
+tabs.forEach(t=>t.addEventListener('click',()=>{
+  tabs.forEach(o=>{ o.setAttribute('aria-selected', String(o===t));
+    document.getElementById(o.getAttribute('aria-controls')).hidden = (o!==t); });
+}));
+document.getElementById('p-annee').addEventListener('change',()=>{ rendreTout(); });
+document.getElementById('p-office').addEventListener('change',()=>{
+  appliquerFiltres(); rendreDashboard(); rendreSuivi(); rendreComite(); });
+document.getElementById('su-f').addEventListener('change',rendreSuivi);
+document.getElementById('su-q').addEventListener('input',rendreSuivi);
+document.getElementById('co-per').addEventListener('change',rendreComite);
+document.getElementById('co-print').addEventListener('click',()=>window.print());
+document.getElementById('reload').addEventListener('click',()=>{
+  if(window.grist) rafraichir().catch(e=>setStatus('err','Erreur : '+esc(e.message), true)); });
+
+/* ---------- démarrage ---------- */
+TOUT = jeuDemo();
+rendreTout();
+bootGrist().then(connecte=>{
+  if(!connecte) setStatus('demo','<b>Jeu de démonstration fictif</b> — cette page n\'est pas affichée '
+    +'dans Grist. Écoles, dates et descriptions sont inventées&nbsp;; aucune donnée de la commune '
+    +'ne figure ici.', false);
+}).catch(e=>{
+  TOUT = jeuDemo(); rendreTout();
+  setStatus('err','<b>Connexion à Grist impossible</b> — '+esc(e.message)
+    +'. Affichage du jeu de démonstration.', true);
+});
+</script>
+</body>
+</html>
