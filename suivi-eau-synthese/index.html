@@ -73,7 +73,8 @@ footer{color:var(--muted);font-size:11.5px;margin-top:26px;border-top:1px solid 
 <header>
   <h1>Synthèse du suivi de l'eau</h1>
   <p>Vue de lecture du document Grist « Suivi de l'eau » : l'état des fuites en cours, les points
-     qui attendent une vérification, et les consommations relevées du parc communal.</p>
+     qui attendent une vérification, les consommations relevées du parc communal, et le suivi
+     budgétaire de l'article 60611.</p>
 </header>
 
 <div class="banner">
@@ -88,6 +89,7 @@ footer{color:var(--muted);font-size:11.5px;margin-top:26px;border-top:1px solid 
   <button role="tab" aria-selected="true" data-t="bord">Tableau de bord</button>
   <button role="tab" aria-selected="false" data-t="fuites">Fuites</button>
   <button role="tab" aria-selected="false" data-t="conso">Consommations</button>
+  <button role="tab" aria-selected="false" data-t="budget">Budget</button>
 </nav>
 
 <section id="bord">
@@ -140,9 +142,41 @@ footer{color:var(--muted);font-size:11.5px;margin-top:26px;border-top:1px solid 
   </div>
 </section>
 
+<section id="budget" hidden>
+  <div class="tiles" id="b-tuiles"></div>
+  <div class="card">
+    <h2>Services faits en attente de constatation</h2>
+    <p class="hint">Factures reçues et non encore certifiées. Tant qu'un service fait n'est pas
+       constaté, la dépense n'est ni mandatée ni visible — et les intérêts moratoires courent.
+       C'est le seul délai de cette page qui soit entièrement dans notre main.</p>
+    <div id="b-sf"></div>
+  </div>
+  <div class="card">
+    <h2>Crédits et consommation, par engagement</h2>
+    <p class="hint">En M57 le crédit est consommé par l'engagement, pas par le mandatement :
+       c'est la colonne « consommé » qui compte, pas « mandaté ».</p>
+    <div id="b-eng"></div>
+    <div id="b-avert"></div>
+  </div>
+  <div class="card">
+    <h2>Rythme de mandatement</h2>
+    <p class="hint">Part de la dépense de l'exercice liquidée à la fin de chaque mois, année par
+       année. C'est la seule base sérieuse pour juger si l'année en cours suit son cours.</p>
+    <div id="b-cadence"></div>
+  </div>
+  <div class="card">
+    <h2>Report d'un exercice sur l'autre</h2>
+    <p class="hint">Part de la consommation d'une année payée sur un exercice ultérieur. Le
+       rattachement des charges neutralise ce décalage en comptabilité ; il reste à l'anticiper
+       en prévision.</p>
+    <div id="b-report"></div>
+  </div>
+</section>
+
 <footer>
   <b>Widget Grist, en lecture seule.</b> À ajouter comme vue personnalisée dans le document
-  « Suivi de l'eau », avec le niveau d'accès « Accès complet au document » — il lit trois tables.
+  « Suivi de l'eau », avec le niveau d'accès « Accès complet au document » — il lit six tables,
+  dont trois facultatives : sans elles, l'onglet Budget le signale au lieu de tomber en panne.
   Ouvert hors de Grist, il n'affiche qu'un jeu de démonstration inventé. — Ville du Bouscat.
 </footer>
 </div>
@@ -162,7 +196,8 @@ footer{color:var(--muted);font-size:11.5px;margin-top:26px;border-top:1px solid 
    Aucune dépendance externe : les graphiques sont des SVG écrits ici.
    =================================================================== */
 
-const TABLES = { points:"Points_livraison", conso:"Consommations", fuites:"Suivi_fuites" };
+const TABLES = { points:"Points_livraison", conso:"Consommations", fuites:"Suivi_fuites",
+                 liq:"Liquidations", sf:"Services_faits", budget:"Budget" };
 const GRIST_URL_MANUEL = "";      // ex. "https://grist.numerique.gouv.fr" si le référent est masqué
 
 // Seuils métier
@@ -229,6 +264,44 @@ const DEMO_FUITES = [
   {c:"900104",s:"École des Marronniers",d:"2025-05-02",q:9, p:31.5,st:"Réparée", v:"B. Durand",dp:"2025-05-09",co:"Fuite enterrée",              i:"Tronçon repris",  dr:"2025-05-19"},
   {c:"900102",s:"Parc de la Fontaine",  d:"2025-04-18",q:15,p:44.1,st:"Réparée", v:"A. Martin",dp:"2025-04-23",co:"Arrosage resté ouvert",       i:"Programmateur",   dr:"2025-04-24"},
 ];
+// Crédits, liquidations et services faits de démonstration — INVENTÉS.
+// Aucun rapport avec le budget réel de la commune.
+const DEMO_BUDGET = [
+  {c:"E1000001",l:"Espaces et bâtiments",bp:14000,v:3200,cr:17200,m:12100,e:5100,d:0},
+  {c:"E1000002",l:"Enseignement",        bp:9000, v:0,   cr:9000, m:5400, e:3600,d:0},
+  {c:"E1000003",l:"Médiathèque",         bp:1500, v:0,   cr:1500, m:-180, e:1680,d:0},
+  {c:"E1000004",l:"Petite enfance",      bp:1200, v:400, cr:1600, m:900,  e:700, d:0},
+  {c:"E1000005",l:"Piscine",             bp:12000,v:2600,cr:14600,m:4100, e:7300,d:3200},
+];
+const DEMO_SF = [
+  {n:"S200011",d:"2026-01-22",mt:4210.40,o:"Eau Piscine 2025",       j:221,im:271.30,e:"E1000005"},
+  {n:"S200342",d:"2026-03-11",mt:1180.05,o:"Eau - Petite enfance",   j:173,im:96.40, e:"E1000004"},
+  {n:"S201880",d:"2026-06-30",mt:3905.72,o:"Eau - Espaces communaux",j:62, im:81.10, e:"E1000001"},
+];
+function demoLiq(){
+  // Quatre exercices : un rythme irrégulier, et une part payée en N+1,
+  // pour que la page montre ce qu'elle sait montrer.
+  const out=[]; const profils={
+    2022:[0,4,22,3,0,9,14,2,18,11,0,17], 2023:[2,9,6,14,1,11,3,0,8,21,5,20],
+    2024:[7,1,19,4,0,6,26,3,12,9,0,13],  2025:[0,12,11,15,2,0,7,19,4,14,16,0],
+  };
+  const totaux={2022:41000,2023:33000,2024:38000,2025:40000};
+  for(const an of Object.keys(profils).map(Number)){
+    profils[an].forEach((part,i)=>{
+      if(!part) return;
+      const mt=Math.round(totaux[an]*part/100);
+      // une part de la consommation de l'année précédente, payée ici
+      const conso = (i<3) ? an-1 : an;
+      out.push({contrat:"900101", moisLiq:an+"-"+String(i+1).padStart(2,"0"),
+                liquide:mt, ht:Math.round(mt*0.82), m3:Math.round(mt/2.7), anneeConso:conso});
+    });
+  }
+  const cette=new Date().getFullYear();
+  [0,1,2,3,4,5].forEach(i=>out.push({contrat:"900101",
+    moisLiq:cette+"-"+String(i+1).padStart(2,"0"),
+    liquide:[0,3800,5200,4100,0,2600][i], ht:0, m3:0, anneeConso:i<3?cette-1:cette}));
+  return out.filter(x=>x.liquide>0);
+}
 function demoConso(){
   const out=[]; const debut=new Date(); debut.setMonth(debut.getMonth()-23);
   // Deux compteurs posés bien avant les autres : ils traînent une queue de mois
@@ -256,7 +329,7 @@ function demoConso(){
 }
 
 /* ---------- état ---------- */
-let POINTS=[], CONSO=[], FUITES=[];
+let POINTS=[], CONSO=[], FUITES=[], LIQ=[], SF=[], BUDGET=[];
 
 /* ---------- normalisation ---------- */
 function normPoint(r){
@@ -290,6 +363,43 @@ function normFuite(r){
     constat: String(pick(r,"Constat")),
     intervention: String(pick(r,"Intervention")),
     resolution: pick(r,"Date_resolution"),
+  };
+}
+
+function normLiq(r){
+  const dl=String(pick(r,"Date_liquidation","Date_liq")||"");
+  return {
+    contrat: String(pick(r,"Reference_contrat","Contrat")),
+    moisLiq: dl.slice(0,7),
+    liquide: nombre(pick(r,"Montant_liquide","Montant_liquide_num")) || 0,
+    ht: nombre(pick(r,"Montant_HT")) || 0,
+    m3: nombre(pick(r,"M3")) || 0,
+    anneeConso: parseInt(pick(r,"Annee_conso"),10) || 0,
+  };
+}
+function normSF(r){
+  return {
+    num: String(pick(r,"Numero_SF","N_SF")),
+    cree: pick(r,"Date_creation"),
+    montant: nombre(pick(r,"Montant_HT")),
+    objet: String(pick(r,"Objet")),
+    jours: nombre(pick(r,"Delai_jours")),
+    im: nombre(pick(r,"IM_theoriques")),
+    engagement: String(pick(r,"Engagement_probable")),
+    extraction: String(pick(r,"Date_extraction")),
+  };
+}
+function normBudget(r){
+  return {
+    code: String(pick(r,"Code_engagement")),
+    libelle: String(pick(r,"Libelle")),
+    bp: nombre(pick(r,"BP_initial")),
+    virements: nombre(pick(r,"Virements")),
+    credits: nombre(pick(r,"Credits_ouverts")),
+    mandate: nombre(pick(r,"Mandate")),
+    engage: nombre(pick(r,"Engage_non_mandate")),
+    dispo: nombre(pick(r,"Disponible")),
+    situation: String(pick(r,"Date_situation")),
   };
 }
 
@@ -478,7 +588,176 @@ function rendConso(){
     : '<p class="footnote">Tout le parc est télérelevé.</p>';
 }
 
-function rendTout(){ rendBord(); rendFuites(); rendConso(); }
+/* ---------- budget ---------- */
+const euros  = n => n==null||isNaN(n) ? "—" : new Intl.NumberFormat("fr-FR",
+  {style:"currency",currency:"EUR",maximumFractionDigits:0}).format(n);
+
+// Cadence de mandatement : pour chaque exercice, part cumulée liquidée à la
+// fin de chaque mois. Une année n'entre dans la référence que si elle est
+// close — une année en cours n'a pas de total, donc pas de part.
+function cadence(){
+  const parAn={};
+  LIQ.forEach(l=>{
+    if(!l.moisLiq) return;
+    const an=+l.moisLiq.slice(0,4), m=+l.moisLiq.slice(5,7);
+    if(!an||!m) return;
+    (parAn[an]=parAn[an]||new Array(13).fill(0))[m]+=l.liquide||0;
+  });
+  const cette=new Date().getFullYear();
+  const out=[];
+  for(const an of Object.keys(parAn).map(Number).sort()){
+    const t=parAn[an].reduce((s,x)=>s+x,0);
+    if(t<=0) continue;
+    const cum=[]; let c=0;
+    for(let m=1;m<=12;m++){ c+=parAn[an][m]; cum.push(c); }
+    out.push({an:an, total:t, cum:cum, close:an<cette});
+  }
+  return out;
+}
+
+function rendBudget(){
+  const cette=new Date().getFullYear();
+  const cad=cadence();
+  const closes=cad.filter(x=>x.close && x.total>1000);
+  const encours=cad.find(x=>x.an===cette);
+  const moisEcoule=new Date().getMonth();          // 0..11, mois révolus
+
+  const credits=BUDGET.reduce((s,b)=>s+(b.credits||0),0);
+  const mandate=BUDGET.reduce((s,b)=>s+(b.mandate||0),0);
+  const engage =BUDGET.reduce((s,b)=>s+(b.engage||0),0);
+  const dispo  =BUDGET.reduce((s,b)=>s+(b.dispo||0),0);
+  const sfMt=SF.reduce((s,x)=>s+(x.montant||0),0);
+  const sfIM=SF.reduce((s,x)=>s+(x.im||0),0);
+  const sfVieux=SF.reduce((s,x)=>Math.max(s,x.jours||0),0);
+
+  // Fourchette d'atterrissage : le mandaté du jour rapporté à la part
+  // normalement atteinte à cette date, pour chaque année close.
+  let fourchette=null;
+  if(closes.length && mandate>0 && moisEcoule>=1){
+    const parts=closes.map(x=>x.cum[moisEcoule-1]/x.total).filter(p=>p>0.02);
+    if(parts.length) fourchette={
+      bas:mandate/Math.max(...parts), haut:mandate/Math.min(...parts),
+      n:parts.length,
+      min:100*Math.min(...parts), max:100*Math.max(...parts)};
+  }
+  const clos=closes.map(x=>x.total).sort((a,b)=>a-b);
+  const median=clos.length?clos[Math.floor(clos.length/2)]:null;
+
+  document.getElementById("b-tuiles").innerHTML=[
+    ["Crédits ouverts", euros(credits), BUDGET.length?("au "+esc(BUDGET[0].situation||"—")):"", ""],
+    ["Mandaté", euros(mandate), credits?Math.round(100*mandate/credits)+" % des crédits":"", ""],
+    ["Consommé (engagé)", euros(mandate+engage),
+      credits?Math.round(100*(mandate+engage)/credits)+" % des crédits":"", ""],
+    ["Disponible", euros(dispo), dispo<=0?"plus rien d'ouvert":"reste à engager",
+      dispo<=0?"alerte":""],
+    ["Services faits non constatés", euros(sfMt),
+      SF.length?(pluriel(SF.length,"facture")+", plus ancienne "+sfVieux+" j"):"aucun",
+      sfVieux>=90?"alerte":""],
+    ["Intérêts moratoires courus", euros(sfIM), sfIM>0?"théoriques, si non traités":"aucun",
+      sfIM>0?"alerte":""],
+  ].map(([l,v,n,cl])=>'<div class="tile '+cl+'"><div class="lab">'+l+'</div><div class="val">'+v
+    +'</div><div class="note">'+n+'</div></div>').join("");
+
+  // --- services faits ---
+  const sf=SF.slice().sort((a,b)=>(b.jours||0)-(a.jours||0));
+  document.getElementById("b-sf").innerHTML = sf.length
+    ? '<div class="ovx"><table><tr><th>N°</th><th>Objet</th><th>Engagement</th>'
+      +'<th class="n">Montant HT</th><th class="n">Créé le</th><th>Délai</th>'
+      +'<th class="n">IM théoriques</th></tr>'
+      + sf.map(x=>{
+          const j=x.jours||0;
+          const cl = j>=90 ? "b-crit" : (j>=30 ? "b-warn" : "b-ok");
+          return '<tr><td>'+esc(x.num)+'</td><td>'+esc(x.objet)+'</td><td>'+esc(x.engagement)
+            +'</td><td class="n">'+euros(x.montant)+'</td><td class="n">'+esc(String(x.cree).slice(0,10))
+            +'</td><td><span class="badge '+cl+'">'+pluriel(j,"jour")+'</span></td>'
+            +'<td class="n">'+euros(x.im)+'</td></tr>';
+        }).join("")+'</table></div>'
+      +'<p class="footnote">Extraction Gecco08 du '+esc(sf[0].extraction||"—")
+      +'. Le rattachement à un engagement est déduit du libellé : il est indicatif.</p>'
+    : '<p class="footnote">Aucun service fait en attente — ou l\'état Gecco08 n\'a pas été déposé.</p>';
+
+  // --- crédits par engagement ---
+  const b=BUDGET.slice().sort((x,y)=>(y.credits||0)-(x.credits||0));
+  document.getElementById("b-eng").innerHTML = b.length
+    ? '<div class="ovx"><table><tr><th>Engagement</th><th class="n">BP initial</th>'
+      +'<th class="n">Virements</th><th class="n">Crédits ouverts</th><th class="n">Mandaté</th>'
+      +'<th class="n">Engagé non mandaté</th><th class="n">Consommé</th><th class="n">Disponible</th></tr>'
+      + b.map(x=>{
+          const cons=(x.mandate||0)+(x.engage||0);
+          const pc=x.credits?Math.round(100*cons/x.credits):null;
+          return '<tr><td>'+esc(x.libelle||x.code)+'</td>'
+            +'<td class="n">'+euros(x.bp)+'</td>'
+            +'<td class="n">'+(x.virements?euros(x.virements):"—")+'</td>'
+            +'<td class="n">'+euros(x.credits)+'</td>'
+            +'<td class="n">'+euros(x.mandate)+'</td>'
+            +'<td class="n">'+euros(x.engage)+'</td>'
+            +'<td class="n">'+euros(cons)+(pc!=null?' <span class="badge '
+              +(pc>=99?"b-crit":(pc>=85?"b-warn":"b-ok"))+'">'+pc+' %</span>':'')+'</td>'
+            +'<td class="n">'+euros(x.dispo)+'</td></tr>';
+        }).join("")+'</table></div>'
+    : '<p class="footnote">Table Budget vide : déposer l\'extraction Gecco05.</p>';
+
+  // Le piège de lecture, affiché seulement quand il se vérifie.
+  const cales=b.filter(x=>x.credits>0 && Math.abs((x.mandate||0)+(x.engage||0)-x.credits)<1);
+  document.getElementById("b-avert").innerHTML = cales.length>=2
+    ? '<p class="footnote"><b>À lire avec précaution.</b> Sur '+pluriel(cales.length,"ligne")
+      +' sur '+b.length+', mandaté + engagé non mandaté égale exactement le crédit voté. '
+      +"C'est la signature d'un engagement global annuel calibré sur le crédit, non d'un carnet "
+      +'de commandes réel. Dans ce cas le disponible est nul par construction et ne dit rien de '
+      +"la dépense à venir : c'est le rythme de mandatement, ci-dessous, qui renseigne."
+      +'</p>'
+    : '';
+
+  // --- cadence ---
+  const el=document.getElementById("b-cadence");
+  if(!cad.length){ el.innerHTML='<p class="footnote">Aucune liquidation dans le document.</p>'; }
+  else{
+    const noms=["janv","févr","mars","avr","mai","juin","juil","août","sept","oct","nov","déc"];
+    el.innerHTML='<div class="ovx"><table><tr><th>Exercice</th>'
+      +noms.map(n=>'<th class="n">'+n+'</th>').join("")+'<th class="n">Total</th></tr>'
+      + cad.map(x=>'<tr><td>'+x.an+(x.close?"":" <span class=\"badge b-mute\">en cours</span>")+'</td>'
+          +x.cum.map((c,i)=>{
+            const p=Math.round(100*c/x.total);
+            const futur=!x.close && i>moisEcoule;
+            return '<td class="n">'+(futur?'<span class="b-mute">—</span>':p+" %")+'</td>';
+          }).join("")
+          +'<td class="n">'+euros(x.total)+'</td></tr>').join("")
+      +'</table></div>'
+      + (fourchette
+          ? '<p class="footnote">À la fin du mois écoulé, les exercices clos avaient liquidé de '
+            +Math.round(fourchette.min)+' % à '+Math.round(fourchette.max)+' % de leur total. '
+            +'Rapporter à cette fourchette le mandaté du jour donne un atterrissage compris entre '
+            +'<b>'+euros(fourchette.bas)+'</b> et <b>'+euros(fourchette.haut)+'</b>'
+            +(median?' — pour une dépense médiane de '+euros(median)+' sur les exercices clos':'')
+            +'. La fourchette est trop large pour décider seule : le mandatement est grumeleux, '
+            +'et le rattachement de fin d\'année n\'y figure pas.</p>'
+          : '<p class="footnote">Pas encore assez d\'exercices clos pour situer l\'année en cours.</p>');
+  }
+
+  // --- report ---
+  const rep={};
+  LIQ.forEach(l=>{
+    if(!l.anneeConso || !l.moisLiq) return;
+    const anLiq=+l.moisLiq.slice(0,4);
+    const e=rep[l.anneeConso]=rep[l.anneeConso]||{tot:0,apres:0};
+    e.tot+=l.liquide||0;
+    if(anLiq>l.anneeConso) e.apres+=l.liquide||0;
+  });
+  const ans=Object.keys(rep).map(Number).filter(a=>rep[a].tot>1000 && a<cette).sort();
+  document.getElementById("b-report").innerHTML = ans.length
+    ? '<div class="ovx"><table><tr><th>Consommation de</th><th class="n">Total payé</th>'
+      +'<th class="n">Payé dans l\'année</th><th class="n">Payé plus tard</th></tr>'
+      + ans.map(a=>{
+          const e=rep[a], p=100*e.apres/e.tot;
+          return '<tr><td>'+a+'</td><td class="n">'+euros(e.tot)+'</td>'
+            +'<td class="n">'+euros(e.tot-e.apres)+'</td>'
+            +'<td class="n">'+euros(e.apres)+' <span class="badge '
+            +(p>=40?"b-crit":(p>=20?"b-warn":"b-ok"))+'">'+Math.round(p)+' %</span></td></tr>';
+        }).join("")+'</table></div>'
+    : '<p class="footnote">Pas assez d\'historique de liquidations pour mesurer le report.</p>';
+}
+
+function rendTout(){ rendBord(); rendFuites(); rendConso(); rendBudget(); }
 
 /* ---------- onglets ---------- */
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
@@ -518,19 +797,29 @@ async function bootGrist(){
   grist.onRecords(()=>rafraichir());                  // une saisie -> réaffichage
   return true;
 }
+// Les trois tables du volet budgétaire peuvent ne pas exister encore : leur
+// absence n'est pas une panne, l'onglet Budget se contente alors de le dire.
+function facultative(nom){
+  return grist.docApi.fetchTable(nom).catch(()=>null);
+}
 async function rafraichir(){
-  const [p,c,f] = await Promise.all([
+  const [p,c,f,l,s,b] = await Promise.all([
     grist.docApi.fetchTable(TABLES.points),
     grist.docApi.fetchTable(TABLES.conso),
     grist.docApi.fetchTable(TABLES.fuites),
+    facultative(TABLES.liq), facultative(TABLES.sf), facultative(TABLES.budget),
   ]);
-  const enLignes = t => (t.id||[]).map((_,i)=>{
+  const enLignes = t => !t ? [] : (t.id||[]).map((_,i)=>{
     const o={}; for(const k in t) o[k]=t[k][i]; return o; });
   POINTS = enLignes(p).map(normPoint);
   CONSO  = enLignes(c).map(normConso);
   FUITES = enLignes(f).map(normFuite);
+  LIQ    = enLignes(l).map(normLiq);
+  SF     = enLignes(s).map(normSF);
+  BUDGET = enLignes(b).map(normBudget);
   setStatut("live","<b>Connecté à Grist</b> — "+pluriel(POINTS.length,"point")+", "
-    +pluriel(CONSO.length,"relevé")+", "+pluriel(FUITES.length,"épisode")+".");
+    +pluriel(CONSO.length,"relevé")+", "+pluriel(FUITES.length,"épisode")
+    +(LIQ.length?", "+pluriel(LIQ.length,"liquidation"):"")+".");
   rendTout();
 }
 
@@ -542,6 +831,11 @@ bootGrist().then(connecte=>{
   CONSO  = demoConso();
   FUITES = DEMO_FUITES.map(d=>({contrat:d.c,site:d.s,debut:d.d,debit:d.q,perte:d.p,statut:d.st,
     verificateur:d.v,passage:d.dp,constat:d.co,intervention:d.i,resolution:d.dr}));
+  LIQ = demoLiq();
+  SF = DEMO_SF.map(d=>({num:d.n,cree:d.d,montant:d.mt,objet:d.o,jours:d.j,im:d.im,
+    engagement:d.e,extraction:"2026-08-31"}));
+  BUDGET = DEMO_BUDGET.map(d=>({code:d.c,libelle:d.l,bp:d.bp,virements:d.v,credits:d.cr,
+    mandate:d.m,engage:d.e,dispo:d.d,situation:"04 septembre 2026"}));
   setStatut("demo","<b>Jeu de démonstration</b> — cette page n'est pas ouverte dans Grist. Sites, "
     +"contrats et volumes sont inventés ; aucune donnée de la commune n'apparaît ici.");
   rendTout();

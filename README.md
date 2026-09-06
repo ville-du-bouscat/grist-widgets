@@ -46,6 +46,9 @@ Vue de lecture du document « Suivi de l'eau ». Trois onglets, alimentés par t
 - **Consommations** — les quinze plus gros consommateurs sur douze mois glissants, comparés à
   leur consommation de référence, et la liste des points sans télérelève, sur lesquels aucune
   alerte n'est possible.
+- **Budget** — crédits ouverts, mandaté, engagé, services faits en attente de constatation avec
+  leurs intérêts moratoires théoriques, rythme de mandatement année par année, et part de chaque
+  exercice payée sur le suivant.
 
 L'onglet **Fuites** est l'écran qui justifie le document. Le chiffre qui compte n'est pas le
 volume perdu mais le nombre d'épisodes que personne n'a pris : c'est faute d'avoir refermé cette

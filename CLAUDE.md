@@ -123,6 +123,24 @@ Points de conception à ne pas casser :
   mensuels, pas figé en dur : il suit le parc. Ne pas remplacer ce garde-fou par une date de
   début écrite en dur, et ne pas le déplacer dans `preparer_imports.py`, qui effacerait la seule
   série de ces deux points.
+- **Onglet Budget : trois tables facultatives.** `Liquidations`, `Services_faits` et `Budget`
+  sont lues par `facultative()`, qui avale l'erreur si la table n'existe pas. Un document monté
+  sans le volet budgétaire doit continuer à fonctionner — ne pas remettre ces trois tables dans
+  le `Promise.all` strict.
+- **Le disponible budgétaire ne veut rien dire ici, et la page doit le dire.** Les engagements
+  60611 de la commune sont des engagements globaux annuels calibrés sur le crédit prévisionnel :
+  mandaté + engagé non mandaté égale exactement le crédit, et le disponible est nul par
+  construction. Le widget détecte cette égalité sur au moins deux lignes et affiche alors
+  l'avertissement correspondant. Ne pas retirer ce garde-fou : sans lui, la page laisse croire
+  que la ligne est saturée.
+- **Le seul chiffre d'action de cet onglet est le stock de services faits non constatés**, en
+  euros et en jours. C'est le seul délai de la chaîne qui soit dans la main de la collectivité,
+  et il porte des intérêts moratoires. Il est en tête, avant les crédits.
+- **Pas d'apostrophe dans les libellés de colonnes créées par l'API Grist, ni de littéral texte
+  dans les formules.** Le pare-feu applicatif (Incapsula) devant `grist.numerique.gouv.fr` bloque
+  en 403 la création d'une table dont la charge utile contient une apostrophe entre deux lettres :
+  il y voit une injection SQL. Constaté le 06/09/2026 sur `Date d'extraction Gecco08`. Vaut pour
+  les scripts de montage, pas pour le widget.
 - **Aucun graphique n'utilise de bibliothèque** : `barresV` (SVG écrit à la main) et `barresH`
   (barres en CSS dans un tableau). Pas de CDN.
 - `pick()` tolère un colId renommé ; `versDate()` accepte une date en texte `AAAA-MM-JJ` comme en
