@@ -169,6 +169,11 @@ const GRIST_URL_MANUEL = "";      // ex. "https://grist.numerique.gouv.fr" si le
 const SEUIL_RECURRENCE = 3;       // épisodes sur un même point avant de parler de récurrence
 const SEUIL_ANCIEN_JOURS = 60;    // au-delà, une fuite ouverte est signalée comme ancienne
 const SEUIL_ECART_PCT = 25;       // écart à la référence au-delà duquel on attire l'œil
+// Un mois n'entre dans le cumul du parc que si au moins cette part des compteurs
+// habituels y a remonté un relevé. Sans ce garde-fou, les tout premiers mois de la
+// série — où deux ou trois compteurs seulement remontaient — produisent des barres
+// minuscules qu'on lit à tort comme une baisse de consommation.
+const PART_MIN_MOIS = 0.5;
 
 /* ---------- utilitaires ---------- */
 const fmt  = n => n==null||isNaN(n) ? "—" : new Intl.NumberFormat("fr-FR",{maximumFractionDigits:0}).format(n);
@@ -226,6 +231,17 @@ const DEMO_FUITES = [
 ];
 function demoConso(){
   const out=[]; const debut=new Date(); debut.setMonth(debut.getMonth()-23);
+  // Deux compteurs posés bien avant les autres : ils traînent une queue de mois
+  // isolés, comme dans le document réel. Ils servent à montrer que ces mois-là
+  // sont écartés du cumul du parc, et non additionnés.
+  for(const c of ["900101","900105"]){
+    for(let i=1;i<=10;i++){
+      const d=new Date(debut.getFullYear(),debut.getMonth()-i,1);
+      out.push({contrat:c,
+        mois:d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"),
+        m3:8+(i%4)});
+    }
+  }
   for(const p of DEMO_POINTS){
     if(p.t!=="oui") continue;
     for(let i=0;i<24;i++){
@@ -312,10 +328,26 @@ function barresH(el, items, unite){
 }
 
 /* ---------- calculs ---------- */
+// Cumul du parc, mois par mois. Un mois où presque aucun compteur n'a remonté de
+// relevé n'est pas un mois de faible consommation : c'est un mois sans mesure. Le
+// sommer produirait une barre trompeuse. On les écarte, et on dit combien.
 function moisParcs(){
   const parMois={};
-  CONSO.forEach(c=>{ if(/^\d{4}-\d{2}$/.test(c.mois)) parMois[c.mois]=(parMois[c.mois]||0)+c.m3; });
-  return Object.keys(parMois).sort().map(m=>({k:m.slice(2),v:Math.round(parMois[m]),mois:m}));
+  CONSO.forEach(c=>{
+    if(!/^\d{4}-\d{2}$/.test(c.mois)) return;
+    const e = parMois[c.mois] || (parMois[c.mois]={v:0,n:0});
+    e.v+=c.m3; e.n++;
+  });
+  const mois=Object.keys(parMois).sort();
+  const effectifs=mois.map(m=>parMois[m].n).sort((a,b)=>a-b);
+  const median=effectifs.length ? effectifs[Math.floor(effectifs.length/2)] : 0;
+  const mini=Math.max(2, Math.round(median*PART_MIN_MOIS));
+  const retenus=mois.filter(m=>parMois[m].n>=mini);
+  return {
+    points: retenus.map(m=>({k:m.slice(2),v:Math.round(parMois[m].v),mois:m,n:parMois[m].n})),
+    ecartes: mois.length-retenus.length,
+    mini: mini,
+  };
 }
 function consoDouzeMois(contrat){
   const m=CONSO.filter(c=>c.contrat===contrat && /^\d{4}-\d{2}$/.test(c.mois))
@@ -349,10 +381,17 @@ function rendBord(){
   ].map(([l,v,n,cl])=>'<div class="tile '+cl+'"><div class="lab">'+l+'</div><div class="val">'+v
     +'</div><div class="note">'+n+'</div></div>').join("");
 
-  const mois=moisParcs();
+  const serie=moisParcs();
   const el=document.getElementById("g-mois");
-  if(mois.length) barresV(el, mois.slice(-24), {alt:"Consommation mensuelle du parc"});
-  else el.innerHTML='<p class="footnote">Aucun relevé mensuel dans le document.</p>';
+  if(serie.points.length){
+    barresV(el, serie.points.slice(-24), {alt:"Consommation mensuelle du parc"});
+    if(serie.ecartes)
+      el.insertAdjacentHTML("beforeend",
+        '<p class="footnote">'+serie.ecartes+' mois écarté'+(serie.ecartes>1?"s":"")
+        +' de ce cumul : moins de '+fmt(serie.mini)+' compteurs y avaient remonté un relevé, '
+        +"le total n'y mesurerait pas la consommation du parc. Ces relevés restent lus point "
+        +'par point dans l\'onglet Consommations.</p>');
+  } else el.innerHTML='<p class="footnote">Aucun relevé mensuel dans le document.</p>';
 
   const parEng={};
   POINTS.forEach(p=>{ const e=p.engagement||"—"; parEng[e]=parEng[e]||{v:0,n:0};

@@ -113,12 +113,22 @@ Points de conception à ne pas casser :
   d'environ 43 % subsiste entre consommation facturée et relevés ; la règle retenue est *la facture
   fait foi pour le budget, le relevé fait foi pour le suivi technique*. Ne pas additionner les deux
   sources dans un même total.
+- **Un mois sans mesure n'est pas un mois de faible consommation.** La série contient une queue
+  de mois anciens où deux à six compteurs seulement remontaient un relevé — six points de
+  livraison posés avant la généralisation de la télérelève, dont deux n'ont *que* cette histoire.
+  Ces relevés sont réels et ne doivent pas être supprimés à l'import. C'est le **cumul du parc**
+  qui n'a pas de sens sur ces mois-là : `moisParcs()` n'y retient donc que les mois où au moins
+  `PART_MIN_MOIS` (la moitié) des compteurs habituels ont remonté, et affiche sous le graphique
+  combien de mois ont été écartés et pourquoi. Le seuil est calculé sur la médiane des effectifs
+  mensuels, pas figé en dur : il suit le parc. Ne pas remplacer ce garde-fou par une date de
+  début écrite en dur, et ne pas le déplacer dans `preparer_imports.py`, qui effacerait la seule
+  série de ces deux points.
 - **Aucun graphique n'utilise de bibliothèque** : `barresV` (SVG écrit à la main) et `barresH`
   (barres en CSS dans un tableau). Pas de CDN.
 - `pick()` tolère un colId renommé ; `versDate()` accepte une date en texte `AAAA-MM-JJ` comme en
   secondes depuis l'époque, au cas où la colonne serait passée en type Date.
-- Seuils métier en tête de script : `SEUIL_RECURRENCE` (3 épisodes), `SEUIL_ANCIEN_JOURS` (60) et
-  `SEUIL_ECART_PCT` (25 %).
+- Seuils métier en tête de script : `SEUIL_RECURRENCE` (3 épisodes), `SEUIL_ANCIEN_JOURS` (60),
+  `SEUIL_ECART_PCT` (25 %) et `PART_MIN_MOIS` (0,5).
 
 Le jeu de démonstration embarqué utilise des sites inventés (Gymnase des Tilleuls, Parc de la
 Fontaine, École du Vieux Chêne…), des contrats en `9001xx` et des engagements en `E10000xx`. Aucun
