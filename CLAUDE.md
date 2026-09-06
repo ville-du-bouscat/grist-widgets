@@ -86,3 +86,44 @@ Points de conception à ne pas casser :
 
 Le jeu de démonstration embarqué utilise des écoles inventées (FER, FERE, CUR, PAG, PRE, SEV) qui ne
 correspondent à aucun office réel. Ne jamais y substituer les codes de la commune.
+
+## Widget `suivi-eau-synthese`
+
+Vue de lecture du document « Suivi de l'eau » (eau potable du parc communal, 65 points de livraison).
+
+Trois tables Grist, clé de jointure `Reference_contrat` :
+
+| Table | Une ligne = | Fait autorité sur |
+|---|---|---|
+| `Points_livraison` | un point de livraison | référentiel : site, engagement, seuil, télérelève, conso de référence |
+| `Consommations` | contrat × mois | la série mensuelle télérelevée |
+| `Suivi_fuites` | un épisode de fuite | le constat des agents — la seule donnée saisie à la main |
+
+Points de conception à ne pas casser :
+
+- **Le widget ne sert pas à afficher des m³, il sert à montrer ce qui attend quelqu'un.** La file
+  des épisodes ouverts sans vérificateur est la première chose affichée, et le compteur
+  correspondant est la seule tuile en rouge avec les fuites ouvertes. C'est faute d'avoir refermé
+  cette boucle que 183 alertes de la Régie sont restées sans suite. Ne pas rétrograder cet écran
+  au profit des graphiques de consommation.
+- **`Suivi_fuites` est en lecture ici, mais c'est une table de saisie.** Le widget ne doit jamais
+  y écrire : la saisie se fait dans la vue Grist native, où l'historique et les règles d'accès
+  s'appliquent.
+- **Relevé et facture ne se mélangent pas.** Le widget n'affiche que du relevé télérelevé. Un écart
+  d'environ 43 % subsiste entre consommation facturée et relevés ; la règle retenue est *la facture
+  fait foi pour le budget, le relevé fait foi pour le suivi technique*. Ne pas additionner les deux
+  sources dans un même total.
+- **Aucun graphique n'utilise de bibliothèque** : `barresV` (SVG écrit à la main) et `barresH`
+  (barres en CSS dans un tableau). Pas de CDN.
+- `pick()` tolère un colId renommé ; `versDate()` accepte une date en texte `AAAA-MM-JJ` comme en
+  secondes depuis l'époque, au cas où la colonne serait passée en type Date.
+- Seuils métier en tête de script : `SEUIL_RECURRENCE` (3 épisodes), `SEUIL_ANCIEN_JOURS` (60) et
+  `SEUIL_ECART_PCT` (25 %).
+
+Le jeu de démonstration embarqué utilise des sites inventés (Gymnase des Tilleuls, Parc de la
+Fontaine, École du Vieux Chêne…), des contrats en `9001xx` et des engagements en `E10000xx`. Aucun
+ne correspond à un point réel. Ne jamais y substituer le référentiel de la commune.
+
+Les scripts d'alimentation du document vivent ailleurs, hors de ce dépôt, dans le dossier de
+travail `Suivi 2026 - fluides/eau/grist/` : ils ne doivent pas être committés ici, ils contiennent
+des chemins et des références réelles.

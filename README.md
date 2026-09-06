@@ -9,6 +9,7 @@ comme **vues personnalisées** (« custom widgets »).
 |---|---|---|
 | `reconciliation-investissement` | Rapproche l'extraction comptable Grand Angle et le suivi opérationnel des services techniques | `https://ville-du-bouscat.github.io/grist-widgets/reconciliation-investissement/` |
 | `dysfonctionnements-synthese` | Tableau de bord, liste de travail et synthèse de comité pour le suivi des dysfonctionnements de la restauration scolaire | `https://ville-du-bouscat.github.io/grist-widgets/dysfonctionnements-synthese/` |
+| `suivi-eau-synthese` | Synthèse du suivi de l'eau potable : fuites en attente de vérification, récurrences, consommations relevées du parc communal | `https://ville-du-bouscat.github.io/grist-widgets/suivi-eau-synthese/` |
 
 Ouverts hors de Grist, ces widgets affichent un jeu de démonstration **fictif** — voir l'avertissement ci-dessous.
 
@@ -30,6 +31,29 @@ son office, sans qu'aucun filtre ne soit à poser dans la page.
 L'année scolaire est lue dans la colonne `Annee_scolaire` quand elle est renseignée, et recalculée
 depuis la date du constat sinon — bascule au 1er septembre. La nouvelle année scolaire est proposée
 dans le sélecteur même lorsqu'elle est vide : c'est l'espace vierge de la rentrée.
+
+### `suivi-eau-synthese`
+
+Vue de lecture du document « Suivi de l'eau ». Trois onglets, alimentés par trois tables —
+`Points_livraison`, `Consommations` et `Suivi_fuites` :
+
+- **Tableau de bord** — points de livraison et télérelève, consommation de référence, fuites
+  ouvertes et volume perdu, épisodes sans vérificateur, points sans télérelève, délai moyen de
+  résolution ; consommation mensuelle du parc et volume par engagement comptable.
+- **Fuites** — la file d'attente : les épisodes ouverts qu'aucun agent n'a pris, du plus ancien
+  au plus récent, puis ceux en cours de traitement, puis les points à récurrence anormale
+  (au moins trois épisodes sur le même point).
+- **Consommations** — les quinze plus gros consommateurs sur douze mois glissants, comparés à
+  leur consommation de référence, et la liste des points sans télérelève, sur lesquels aucune
+  alerte n'est possible.
+
+L'onglet **Fuites** est l'écran qui justifie le document. Le chiffre qui compte n'est pas le
+volume perdu mais le nombre d'épisodes que personne n'a pris : c'est faute d'avoir refermé cette
+boucle que 183 alertes sont restées sans suite. Renseigner « Qui a vérifié » suffit à faire
+sortir une ligne de la file.
+
+Le widget tolère qu'une colonne ait été renommée dans le document, et accepte les dates aussi
+bien en texte `AAAA-MM-JJ` qu'en type Date.
 
 ## ⚠ Ce dépôt est public — règle absolue
 
@@ -119,6 +143,10 @@ possible. **Il n'écrit rien.**
 ├── index.html                          page d'accueil, liste des widgets
 ├── reconciliation-investissement/
 │   └── index.html                      widget autonome (ouvrable aussi en double-clic)
+├── dysfonctionnements-synthese/
+│   └── index.html
+├── suivi-eau-synthese/
+│   └── index.html
 └── .github/workflows/pages.yml         publication automatique
 ```
 

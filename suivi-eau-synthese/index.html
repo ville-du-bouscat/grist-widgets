@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Synthèse du suivi de l'eau — widget Grist</title>
+<style>
+:root{
+  color-scheme: light dark;
+  --plane:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --ring:rgba(11,11,11,.10);
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a;
+  --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --critical:#d03b3b;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --plane:#0d0d0d; --surface:#1a1a19; --ink:#fff; --ink2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,.10);
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--plane);color:var(--ink);
+  font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-text-size-adjust:100%}
+.wrap{max-width:1200px;margin:0 auto;padding:18px 20px 48px}
+header h1{font-size:19px;margin:0 0 2px;letter-spacing:-.01em}
+header p{color:var(--muted);font-size:12.5px;margin:0 0 14px;max-width:70ch}
+body.in-grist .wrap{padding-top:12px}
+body.in-grist header,body.in-grist .banner,body.in-grist footer{display:none}
+.statut{font-size:12.5px;padding:8px 11px;border-radius:8px;border:1px solid var(--ring);margin-bottom:14px}
+.statut.live{background:color-mix(in srgb,var(--good) 10%,transparent)}
+.statut.demo{background:color-mix(in srgb,var(--warn) 14%,transparent)}
+.statut.err{background:color-mix(in srgb,var(--critical) 10%,transparent)}
+nav{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--grid);margin-bottom:18px}
+nav button{background:none;border:0;border-bottom:2px solid transparent;padding:9px 14px;
+  font:inherit;color:var(--ink2);cursor:pointer;margin-bottom:-1px}
+nav button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--s1);font-weight:600}
+nav button:hover{color:var(--ink)}
+section[hidden]{display:none!important}
+.card{background:var(--surface);border:1px solid var(--ring);border-radius:10px;padding:15px 17px;margin-bottom:15px}
+.card h2{font-size:14px;margin:0 0 2px}
+.card p.hint{color:var(--muted);font-size:12px;margin:0 0 13px;max-width:75ch}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:11px;margin-bottom:15px}
+.tile{background:var(--surface);border:1px solid var(--ring);border-radius:10px;padding:13px 15px}
+.tile .lab{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.tile .val{font-size:25px;font-weight:600;letter-spacing:-.02em;margin-top:2px}
+.tile .note{color:var(--ink2);font-size:12px;margin-top:2px}
+.tile.alerte .val{color:var(--critical)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:6px 9px;border-bottom:1px solid var(--grid);vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.ovx{overflow-x:auto;max-width:100%}
+.badge{display:inline-block;padding:1px 7px;border-radius:99px;font-size:11px;font-weight:600;
+  border:1px solid var(--ring);white-space:nowrap}
+.b-crit{background:color-mix(in srgb,var(--critical) 15%,transparent);color:var(--critical)}
+.b-warn{background:color-mix(in srgb,var(--serious) 18%,transparent);color:var(--ink)}
+.b-ok{background:color-mix(in srgb,var(--good) 14%,transparent);color:var(--ink)}
+.b-mute{color:var(--muted)}
+.bar{height:9px;border-radius:0 4px 4px 0;background:var(--s1);display:inline-block;vertical-align:middle;min-width:1px}
+svg{display:block;max-width:100%;overflow:visible}
+.axe text{fill:var(--muted);font-size:10.5px}
+.axe line{stroke:var(--grid)}
+.footnote{color:var(--muted);font-size:11.5px;margin-top:9px}
+.banner{background:var(--surface);border:1px solid var(--ring);border-left:3px solid var(--s1);
+  border-radius:8px;padding:11px 14px;font-size:12.5px;color:var(--ink2);margin-bottom:16px}
+footer{color:var(--muted);font-size:11.5px;margin-top:26px;border-top:1px solid var(--grid);padding-top:12px}
+@media (max-width:620px){.wrap{padding-left:13px;padding-right:13px}.tile .val{font-size:21px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Synthèse du suivi de l'eau</h1>
+  <p>Vue de lecture du document Grist « Suivi de l'eau » : l'état des fuites en cours, les points
+     qui attendent une vérification, et les consommations relevées du parc communal.</p>
+</header>
+
+<div class="banner">
+  <b>Alerter ne suffit pas, il faut refermer la boucle.</b> Cette page met en tête ce qui attend
+  quelqu'un : les fuites ouvertes sans vérificateur. Le reste — consommations, seuils, récurrences —
+  vient après. Hors de Grist, elle affiche un jeu fictif.
+</div>
+
+<div class="statut" id="statut">Chargement…</div>
+
+<nav role="tablist">
+  <button role="tab" aria-selected="true" data-t="bord">Tableau de bord</button>
+  <button role="tab" aria-selected="false" data-t="fuites">Fuites</button>
+  <button role="tab" aria-selected="false" data-t="conso">Consommations</button>
+</nav>
+
+<section id="bord">
+  <div class="tiles" id="tuiles"></div>
+  <div class="card">
+    <h2>Consommation mensuelle du parc</h2>
+    <p class="hint">Somme des relevés télérelevés, mois par mois. Les mois incomplets en fin de série
+       reflètent le rythme de remontée des compteurs, pas une baisse d'usage.</p>
+    <figure id="g-mois"></figure>
+  </div>
+  <div class="card">
+    <h2>Volume par engagement comptable</h2>
+    <p class="hint">Consommation de référence, en m³ par an. C'est la clé de rattachement au budget.</p>
+    <div id="g-eng"></div>
+  </div>
+</section>
+
+<section id="fuites" hidden>
+  <div class="card">
+    <h2>À vérifier</h2>
+    <p class="hint">Épisodes ouverts qu'aucun agent n'a encore pris. Triés par ancienneté : le plus
+       ancien en premier, parce que c'est celui qui coûte le plus.</p>
+    <div id="f-relancer"></div>
+  </div>
+  <div class="card">
+    <h2>En cours de traitement</h2>
+    <p class="hint">Un vérificateur est désigné, la fuite n'est pas close.</p>
+    <div id="f-encours"></div>
+  </div>
+  <div class="card">
+    <h2>Points à récurrence anormale</h2>
+    <p class="hint">Sites ayant connu au moins trois épisodes. Une fuite qui revient n'est pas une
+       fuite : c'est un réseau à reprendre.</p>
+    <div id="f-recurrence"></div>
+  </div>
+</section>
+
+<section id="conso" hidden>
+  <div class="card">
+    <h2>Les plus gros consommateurs</h2>
+    <p class="hint">Sur les douze derniers mois relevés, comparés à la consommation de référence.
+       Un écart fortement positif mérite un regard : il précède souvent une fuite.</p>
+    <div id="c-top"></div>
+  </div>
+  <div class="card">
+    <h2>Points sans télérelève</h2>
+    <p class="hint">Aucune alerte n'est possible sur ces points, ni fuite ni surconsommation.
+       Leur équipement fait partie des demandes à la Régie.</p>
+    <div id="c-sanstele"></div>
+  </div>
+</section>
+
+<footer>
+  <b>Widget Grist, en lecture seule.</b> À ajouter comme vue personnalisée dans le document
+  « Suivi de l'eau », avec le niveau d'accès « Accès complet au document » — il lit trois tables.
+  Ouvert hors de Grist, il n'affiche qu'un jeu de démonstration inventé. — Ville du Bouscat.
+</footer>
+</div>
+
+<script>
+/* ===================================================================
+   Widget Grist — Synthèse du suivi de l'eau (Ville du Bouscat)
+
+   Deux modes :
+     • ouvert hors de Grist -> jeu de démonstration FICTIF embarqué
+     • ouvert dans Grist    -> lit en direct les tables du document
+
+   L'API Grist est chargée depuis l'instance qui affiche le widget
+   (déduite du référent), jamais depuis un CDN.
+
+   LECTURE SEULE. Les seuls appels à Grist sont des fetchTable.
+   Aucune dépendance externe : les graphiques sont des SVG écrits ici.
+   =================================================================== */
+
+const TABLES = { points:"Points_livraison", conso:"Consommations", fuites:"Suivi_fuites" };
+const GRIST_URL_MANUEL = "";      // ex. "https://grist.numerique.gouv.fr" si le référent est masqué
+
+// Seuils métier
+const SEUIL_RECURRENCE = 3;       // épisodes sur un même point avant de parler de récurrence
+const SEUIL_ANCIEN_JOURS = 60;    // au-delà, une fuite ouverte est signalée comme ancienne
+const SEUIL_ECART_PCT = 25;       // écart à la référence au-delà duquel on attire l'œil
+
+/* ---------- utilitaires ---------- */
+const fmt  = n => n==null||isNaN(n) ? "—" : new Intl.NumberFormat("fr-FR",{maximumFractionDigits:0}).format(n);
+const fmt1 = n => n==null||isNaN(n) ? "—" : new Intl.NumberFormat("fr-FR",{maximumFractionDigits:1}).format(n);
+const esc  = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pluriel = (n,mot,suff) => n+" "+mot+(n>1?(suff||"s"):"");
+
+// Une valeur de date peut arriver en texte AAAA-MM-JJ ou, si la colonne a été
+// passée en type Date, en secondes depuis l'époque. On accepte les deux.
+function versDate(v){
+  if(v==null||v==="") return null;
+  if(typeof v==="number") return new Date(v*1000);
+  const m=String(v).match(/(\d{4})-(\d{2})-(\d{2})/);
+  return m ? new Date(+m[1],+m[2]-1,+m[3]) : null;
+}
+function jours(depuis){
+  const d=versDate(depuis); if(!d) return null;
+  return Math.round((Date.now()-d.getTime())/864e5);
+}
+function nombre(v){
+  if(v==null||v==="") return null;
+  const n=typeof v==="number"?v:parseFloat(String(v).replace(",","."));
+  return isNaN(n)?null:n;
+}
+// Tolère un colId renommé dans le document.
+function pick(o,...noms){
+  for(const n of noms) if(o && o[n]!==undefined && o[n]!==null && o[n]!=="") return o[n];
+  return "";
+}
+
+/* ---------- jeu de démonstration — ENTIÈREMENT FICTIF ----------
+   Sites, contrats et volumes inventés. Ils ne correspondent à aucun
+   point de livraison réel de la commune. Ne jamais y substituer les
+   données du document.                                              */
+const DEMO_POINTS = [
+  {c:"900101",e:"E1000001",s:"Gymnase des Tilleuls",u:"équipement sportif",t:"oui",seuil:180,ref:1420},
+  {c:"900102",e:"E1000001",s:"Parc de la Fontaine",  u:"espaces verts",     t:"oui",seuil:260,ref:2310},
+  {c:"900103",e:"E1000002",s:"École du Vieux Chêne", u:"enseignement",      t:"oui",seuil:150,ref:1180},
+  {c:"900104",e:"E1000002",s:"École des Marronniers",u:"enseignement",      t:"oui",seuil:120,ref:980},
+  {c:"900105",e:"E1000003",s:"Médiathèque Lisière",  u:"bâtiment communal", t:"oui",seuil:60, ref:430},
+  {c:"900106",e:"E1000004",s:"Crèche des Lucioles",  u:"petite enfance",    t:"oui",seuil:90, ref:640},
+  {c:"900107",e:"E1000005",s:"Piscine du Vallon",    u:"piscine",           t:"oui",seuil:900,ref:7800},
+  {c:"900108",e:"E1000001",s:"Cimetière du Coteau",  u:"espaces verts",     t:"non",seuil:0,  ref:110},
+  {c:"900109",e:"E1000001",s:"Atelier municipal",    u:"bâtiment communal", t:"non",seuil:0,  ref:95 },
+];
+const DEMO_FUITES = [
+  {c:"900103",s:"École du Vieux Chêne", d:"2026-06-28",q:36,p:58.8,st:"Ouverte", v:"",         dp:"",           co:"",                          i:"",                dr:""},
+  {c:"900101",s:"Gymnase des Tilleuls", d:"2025-09-03",q:8, p:70.3,st:"Ouverte", v:"",         dp:"",           co:"",                          i:"",                dr:""},
+  {c:"900102",s:"Parc de la Fontaine",  d:"2026-07-12",q:4, p:5.2, st:"Ouverte", v:"",         dp:"",           co:"",                          i:"",                dr:""},
+  {c:"900106",s:"Crèche des Lucioles",  d:"2026-06-07",q:4, p:8.5, st:"Vérifiée",v:"A. Martin",dp:"2026-06-14",co:"Chasse d'eau qui fuit",       i:"Pièce commandée", dr:""},
+  {c:"900104",s:"École des Marronniers",d:"2026-03-03",q:12,p:53.3,st:"Réparée", v:"B. Durand",dp:"2026-03-08",co:"Joint de compteur",           i:"Joint remplacé",  dr:"2026-03-11"},
+  {c:"900104",s:"École des Marronniers",d:"2025-11-14",q:6, p:22.0,st:"Réparée", v:"B. Durand",dp:"2025-11-20",co:"Robinet extérieur",           i:"Robinet changé",  dr:"2025-11-22"},
+  {c:"900104",s:"École des Marronniers",d:"2025-05-02",q:9, p:31.5,st:"Réparée", v:"B. Durand",dp:"2025-05-09",co:"Fuite enterrée",              i:"Tronçon repris",  dr:"2025-05-19"},
+  {c:"900102",s:"Parc de la Fontaine",  d:"2025-04-18",q:15,p:44.1,st:"Réparée", v:"A. Martin",dp:"2025-04-23",co:"Arrosage resté ouvert",       i:"Programmateur",   dr:"2025-04-24"},
+];
+function demoConso(){
+  const out=[]; const debut=new Date(); debut.setMonth(debut.getMonth()-23);
+  for(const p of DEMO_POINTS){
+    if(p.t!=="oui") continue;
+    for(let i=0;i<24;i++){
+      const d=new Date(debut.getFullYear(),debut.getMonth()+i,1);
+      const mois=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+      const saison=1+0.6*Math.sin((d.getMonth()-3)/12*2*Math.PI);   // été plus chargé
+      const bruit=0.85+((i*7+p.c.charCodeAt(5))%17)/60;
+      out.push({contrat:p.c,mois:mois,m3:Math.round(p.ref/12*saison*bruit)});
+    }
+  }
+  return out;
+}
+
+/* ---------- état ---------- */
+let POINTS=[], CONSO=[], FUITES=[];
+
+/* ---------- normalisation ---------- */
+function normPoint(r){
+  return {
+    contrat: String(pick(r,"Reference_contrat","Reference","Contrat")),
+    engagement: String(pick(r,"Code_engagement","Engagement")),
+    site: String(pick(r,"Site")),
+    usage: String(pick(r,"Usage")),
+    telereleve: String(pick(r,"Telereleve","Telereleve_")).toLowerCase()==="oui",
+    seuil: nombre(pick(r,"Seuil_m3_mois","Seuil")),
+    ref: nombre(pick(r,"Conso_reference_m3","Conso_reference")),
+  };
+}
+function normConso(r){
+  return {
+    contrat: String(pick(r,"Reference_contrat","Reference","Contrat")),
+    mois: String(pick(r,"Mois")).slice(0,7),
+    m3: nombre(pick(r,"M3","m3","Consommation")) || 0,
+  };
+}
+function normFuite(r){
+  return {
+    contrat: String(pick(r,"Reference_contrat","Reference","Contrat")),
+    site: String(pick(r,"Site")),
+    debut: pick(r,"Date_debut","Debut"),
+    debit: nombre(pick(r,"Debit_L_h","Debit")),
+    perte: nombre(pick(r,"Perte_m3","Perte")),
+    statut: String(pick(r,"Statut")) || "Ouverte",
+    verificateur: String(pick(r,"Verificateur")),
+    passage: pick(r,"Date_passage"),
+    constat: String(pick(r,"Constat")),
+    intervention: String(pick(r,"Intervention")),
+    resolution: pick(r,"Date_resolution"),
+  };
+}
+
+/* ---------- graphique en barres, SVG écrit à la main ---------- */
+function barresV(el, items, opts){
+  opts=opts||{};
+  const W=Math.max(320, el.clientWidth||860), H=opts.h||200, ml=52, mb=34, mt=8, mr=8;
+  const max=Math.max(1,...items.map(d=>d.v||0));
+  const iw=W-ml-mr, ih=H-mt-mb, pas=iw/Math.max(1,items.length);
+  const bw=Math.min(34, Math.max(3, pas-4));
+  const ticks=[0,max/2,max].map(v=>Math.round(v/10)*10);
+  let s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(opts.alt||"")+'"><g class="axe">';
+  ticks.forEach(t=>{const y=mt+ih-(t/max)*ih;
+    s+='<line x1="'+ml+'" x2="'+(W-mr)+'" y1="'+y+'" y2="'+y+'"/>'
+      +'<text x="'+(ml-7)+'" y="'+(y+4)+'" text-anchor="end">'+fmt(t)+'</text>';});
+  s+='</g>';
+  const saut=Math.ceil(items.length/12);
+  items.forEach((d,i)=>{
+    const x=ml+i*pas+(pas-bw)/2, h=Math.max(1,(d.v/max)*ih), y=mt+ih-h;
+    s+='<rect x="'+x+'" y="'+y+'" width="'+bw+'" height="'+h+'" rx="4" ry="4" fill="var(--s1)">'
+      +'<title>'+esc(d.k)+' : '+fmt(d.v)+' m³</title></rect>';
+    if(i%saut===0)
+      s+='<text class="lb" x="'+(x+bw/2)+'" y="'+(H-12)+'" text-anchor="end" fill="var(--muted)" '
+        +'font-size="10.5" transform="rotate(-45 '+(x+bw/2)+' '+(H-12)+')">'+esc(d.k)+'</text>';
+  });
+  el.innerHTML=s+'</svg>';
+}
+function barresH(el, items, unite){
+  const max=Math.max(1,...items.map(d=>d.v||0));
+  el.innerHTML='<div class="ovx"><table>'+items.map(d=>
+    '<tr><td style="white-space:nowrap">'+esc(d.k)+'</td>'
+    +'<td class="n" style="white-space:nowrap">'+fmt(d.v)+' '+(unite||"m³")+'</td>'
+    +'<td style="width:60%"><span class="bar" style="width:'+Math.max(1,(d.v/max)*100)+'%"></span>'
+    +(d.note?' <span style="color:var(--muted);font-size:11.5px">'+esc(d.note)+'</span>':'')+'</td></tr>'
+  ).join("")+'</table></div>';
+}
+
+/* ---------- calculs ---------- */
+function moisParcs(){
+  const parMois={};
+  CONSO.forEach(c=>{ if(/^\d{4}-\d{2}$/.test(c.mois)) parMois[c.mois]=(parMois[c.mois]||0)+c.m3; });
+  return Object.keys(parMois).sort().map(m=>({k:m.slice(2),v:Math.round(parMois[m]),mois:m}));
+}
+function consoDouzeMois(contrat){
+  const m=CONSO.filter(c=>c.contrat===contrat && /^\d{4}-\d{2}$/.test(c.mois))
+               .sort((a,b)=>a.mois<b.mois?1:-1).slice(0,12);
+  return m.length===12 ? m.reduce((s,x)=>s+x.m3,0) : null;
+}
+const estOuverte = f => f.statut!=="Réparée" && f.statut!=="Sans suite" && !f.resolution;
+const aRelancer  = f => estOuverte(f) && !f.verificateur;
+
+/* ---------- rendu ---------- */
+function rendBord(){
+  const ouvertes=FUITES.filter(estOuverte);
+  const relancer=FUITES.filter(aRelancer);
+  const perdu=ouvertes.reduce((s,f)=>s+(f.perte||0),0);
+  const sansTele=POINTS.filter(p=>!p.telereleve).length;
+  const refParc=POINTS.reduce((s,p)=>s+(p.ref||0),0);
+  const closes=FUITES.filter(f=>f.resolution && f.debut);
+  const delais=closes.map(f=>{
+    const a=versDate(f.debut), b=versDate(f.resolution);
+    return (a&&b) ? Math.round((b-a)/864e5) : null;
+  }).filter(x=>x!=null && x>=0);
+  const delaiMoyen=delais.length ? Math.round(delais.reduce((s,x)=>s+x,0)/delais.length) : null;
+
+  document.getElementById("tuiles").innerHTML=[
+    ["Points de livraison", fmt(POINTS.length), pluriel(POINTS.filter(p=>p.telereleve).length,"télérelevé"), ""],
+    ["Consommation de référence", fmt(refParc), "m³/an", ""],
+    ["Fuites ouvertes", fmt(ouvertes.length), fmt1(perdu)+" m³ perdus", ouvertes.length?"alerte":""],
+    ["Sans vérificateur", fmt(relancer.length), relancer.length?"personne n'y est allé":"tout est pris", relancer.length?"alerte":""],
+    ["Points sans télérelève", fmt(sansTele), sansTele?"aucune alerte possible":"parc complet", ""],
+    ["Délai moyen de résolution", delaiMoyen==null?"—":fmt(delaiMoyen), delaiMoyen==null?"aucune fuite close":"jours, sur "+pluriel(delais.length,"fuite")+" close"+(delais.length>1?"s":""), ""],
+  ].map(([l,v,n,cl])=>'<div class="tile '+cl+'"><div class="lab">'+l+'</div><div class="val">'+v
+    +'</div><div class="note">'+n+'</div></div>').join("");
+
+  const mois=moisParcs();
+  const el=document.getElementById("g-mois");
+  if(mois.length) barresV(el, mois.slice(-24), {alt:"Consommation mensuelle du parc"});
+  else el.innerHTML='<p class="footnote">Aucun relevé mensuel dans le document.</p>';
+
+  const parEng={};
+  POINTS.forEach(p=>{ const e=p.engagement||"—"; parEng[e]=parEng[e]||{v:0,n:0};
+    parEng[e].v+=p.ref||0; parEng[e].n++; });
+  barresH(document.getElementById("g-eng"),
+    Object.keys(parEng).sort().map(e=>({k:e,v:Math.round(parEng[e].v),
+      note:pluriel(parEng[e].n,"point")})).sort((a,b)=>b.v-a.v));
+}
+
+function ligneFuite(f, avecSuivi){
+  const j=jours(f.debut);
+  const anc = j==null ? "" : (j>SEUIL_ANCIEN_JOURS
+    ? '<span class="badge b-crit">'+pluriel(j,"jour")+'</span>'
+    : '<span class="badge b-warn">'+pluriel(j,"jour")+'</span>');
+  return '<tr><td>'+esc(f.site||f.contrat)+'</td>'
+    +'<td class="n">'+fmt(f.debit)+' L/h</td>'
+    +'<td class="n">'+fmt1(f.perte)+' m³</td>'
+    +'<td>'+esc(String(f.debut).slice(0,10))+'</td><td>'+anc+'</td>'
+    +(avecSuivi?'<td>'+esc(f.verificateur)+'</td><td>'+esc(f.constat)+'</td>'
+      +'<td>'+esc(f.intervention)+'</td>':'')+'</tr>';
+}
+
+function rendFuites(){
+  const relancer=FUITES.filter(aRelancer)
+    .sort((a,b)=>(jours(b.debut)||0)-(jours(a.debut)||0));
+  document.getElementById("f-relancer").innerHTML = relancer.length
+    ? '<div class="ovx"><table><tr><th>Site</th><th class="n">Débit</th><th class="n">Perdu</th>'
+      +'<th>Depuis</th><th>Ancienneté</th></tr>'+relancer.map(f=>ligneFuite(f,false)).join("")+'</table></div>'
+      +'<p class="footnote">'+pluriel(relancer.length,"épisode")+' sans vérificateur désigné. '
+      +'Renseigner « Qui a vérifié » dans le document fait sortir la ligne de cette liste.</p>'
+    : '<p class="footnote">Aucun épisode en attente : chaque fuite ouverte a son vérificateur.</p>';
+
+  const encours=FUITES.filter(f=>estOuverte(f) && f.verificateur)
+    .sort((a,b)=>(jours(b.debut)||0)-(jours(a.debut)||0));
+  document.getElementById("f-encours").innerHTML = encours.length
+    ? '<div class="ovx"><table><tr><th>Site</th><th class="n">Débit</th><th class="n">Perdu</th>'
+      +'<th>Depuis</th><th>Ancienneté</th><th>Vérificateur</th><th>Constat</th><th>Intervention</th></tr>'
+      +encours.map(f=>ligneFuite(f,true)).join("")+'</table></div>'
+    : '<p class="footnote">Rien en cours de traitement.</p>';
+
+  const parSite={};
+  FUITES.forEach(f=>{ const k=f.site||f.contrat; parSite[k]=parSite[k]||{n:0,perdu:0,ouvertes:0};
+    parSite[k].n++; parSite[k].perdu+=f.perte||0; if(estOuverte(f)) parSite[k].ouvertes++; });
+  const rec=Object.keys(parSite).filter(k=>parSite[k].n>=SEUIL_RECURRENCE)
+    .sort((a,b)=>parSite[b].n-parSite[a].n);
+  document.getElementById("f-recurrence").innerHTML = rec.length
+    ? '<div class="ovx"><table><tr><th>Site</th><th class="n">Épisodes</th><th class="n">Total perdu</th>'
+      +'<th>Ouvertes</th></tr>'+rec.map(k=>'<tr><td>'+esc(k)+'</td><td class="n">'+parSite[k].n
+      +'</td><td class="n">'+fmt1(parSite[k].perdu)+' m³</td><td>'
+      +(parSite[k].ouvertes?'<span class="badge b-crit">'+parSite[k].ouvertes+'</span>':'<span class="badge b-ok">aucune</span>')
+      +'</td></tr>').join("")+'</table></div>'
+    : '<p class="footnote">Aucun point n\'atteint '+SEUIL_RECURRENCE+' épisodes.</p>';
+}
+
+function rendConso(){
+  const l=POINTS.map(p=>{
+    const douze=consoDouzeMois(p.contrat);
+    const ecart=(douze!=null && p.ref) ? (douze-p.ref)/p.ref*100 : null;
+    return {p:p, douze:douze, ecart:ecart};
+  }).filter(x=>x.douze!=null).sort((a,b)=>b.douze-a.douze).slice(0,15);
+
+  document.getElementById("c-top").innerHTML = l.length
+    ? '<div class="ovx"><table><tr><th>Site</th><th>Engagement</th><th class="n">12 derniers mois</th>'
+      +'<th class="n">Référence</th><th class="n">Écart</th><th class="n">Seuil</th></tr>'
+      + l.map(x=>{
+          let e='—';
+          if(x.ecart!=null){
+            const cl = x.ecart>SEUIL_ECART_PCT ? "b-crit" : (x.ecart<-SEUIL_ECART_PCT ? "b-mute" : "b-ok");
+            e='<span class="badge '+cl+'">'+(x.ecart>0?"+":"")+Math.round(x.ecart)+' %</span>';
+          }
+          return '<tr><td>'+esc(x.p.site)+'</td><td>'+esc(x.p.engagement)+'</td>'
+            +'<td class="n">'+fmt(x.douze)+' m³</td><td class="n">'+fmt(x.p.ref)+' m³</td>'
+            +'<td class="n">'+e+'</td><td class="n">'+(x.p.seuil?fmt(x.p.seuil):'—')+'</td></tr>';
+        }).join("")+'</table></div>'
+      +'<p class="footnote">Seuls les points disposant de douze mois complets de relevés figurent ici.</p>'
+    : '<p class="footnote">Aucun point ne dispose encore de douze mois complets de relevés.</p>';
+
+  const sans=POINTS.filter(p=>!p.telereleve);
+  document.getElementById("c-sanstele").innerHTML = sans.length
+    ? '<div class="ovx"><table><tr><th>Site</th><th>Contrat</th><th>Engagement</th><th>Usage</th>'
+      +'<th class="n">Référence</th></tr>'+sans.map(p=>'<tr><td>'+esc(p.site)+'</td><td>'+esc(p.contrat)
+      +'</td><td>'+esc(p.engagement)+'</td><td>'+esc(p.usage)+'</td><td class="n">'+fmt(p.ref)
+      +' m³/an</td></tr>').join("")+'</table></div>'
+    : '<p class="footnote">Tout le parc est télérelevé.</p>';
+}
+
+function rendTout(){ rendBord(); rendFuites(); rendConso(); }
+
+/* ---------- onglets ---------- */
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll("nav button").forEach(x=>x.setAttribute("aria-selected", x===b));
+  document.querySelectorAll("section").forEach(s=>s.hidden = s.id!==b.dataset.t);
+  if(b.dataset.t==="bord") rendBord();   // le SVG a besoin de la largeur réelle
+});
+addEventListener("resize", ()=>{ if(!document.getElementById("bord").hidden) rendBord(); });
+
+function setStatut(cl, html){
+  const e=document.getElementById("statut");
+  e.className="statut "+cl; e.innerHTML=html;
+}
+
+/* ---------- connexion à Grist ---------- */
+function chargerScript(src){
+  return new Promise((ok,ko)=>{
+    const s=document.createElement("script");
+    s.src=src; s.onload=ok; s.onerror=()=>ko(new Error("chargement impossible : "+src));
+    document.head.appendChild(s);
+  });
+}
+function origineGrist(){
+  if(GRIST_URL_MANUEL) return GRIST_URL_MANUEL;
+  try{ if(document.referrer) return new URL(document.referrer).origin; }catch(e){}
+  return null;
+}
+async function bootGrist(){
+  if(window.self===window.top) return false;          // pas dans une iframe : mode démonstration
+  const origine=origineGrist();
+  if(!origine) throw new Error("instance Grist introuvable (référent masqué) — renseigner GRIST_URL_MANUEL");
+  document.body.classList.add("in-grist");
+  await chargerScript(origine+"/grist-plugin-api.js");
+  if(!window.grist) throw new Error("l'API Grist ne s'est pas chargée");
+  grist.ready({ requiredAccess:"full" });             // trois tables lues : accès complet requis
+  await rafraichir();
+  grist.onRecords(()=>rafraichir());                  // une saisie -> réaffichage
+  return true;
+}
+async function rafraichir(){
+  const [p,c,f] = await Promise.all([
+    grist.docApi.fetchTable(TABLES.points),
+    grist.docApi.fetchTable(TABLES.conso),
+    grist.docApi.fetchTable(TABLES.fuites),
+  ]);
+  const enLignes = t => (t.id||[]).map((_,i)=>{
+    const o={}; for(const k in t) o[k]=t[k][i]; return o; });
+  POINTS = enLignes(p).map(normPoint);
+  CONSO  = enLignes(c).map(normConso);
+  FUITES = enLignes(f).map(normFuite);
+  setStatut("live","<b>Connecté à Grist</b> — "+pluriel(POINTS.length,"point")+", "
+    +pluriel(CONSO.length,"relevé")+", "+pluriel(FUITES.length,"épisode")+".");
+  rendTout();
+}
+
+/* ---------- démarrage ---------- */
+bootGrist().then(connecte=>{
+  if(connecte) return;
+  POINTS = DEMO_POINTS.map(d=>({contrat:d.c,engagement:d.e,site:d.s,usage:d.u,
+    telereleve:d.t==="oui",seuil:d.seuil,ref:d.ref}));
+  CONSO  = demoConso();
+  FUITES = DEMO_FUITES.map(d=>({contrat:d.c,site:d.s,debut:d.d,debit:d.q,perte:d.p,statut:d.st,
+    verificateur:d.v,passage:d.dp,constat:d.co,intervention:d.i,resolution:d.dr}));
+  setStatut("demo","<b>Jeu de démonstration</b> — cette page n'est pas ouverte dans Grist. Sites, "
+    +"contrats et volumes sont inventés ; aucune donnée de la commune n'apparaît ici.");
+  rendTout();
+}).catch(e=>{
+  setStatut("err","<b>Connexion à Grist impossible</b> — "+esc(e.message)
+    +'. Vérifier que la vue personnalisée a bien le niveau « Accès complet au document ».');
+  rendTout();
+});
+</script>
+</body>
+</html>
