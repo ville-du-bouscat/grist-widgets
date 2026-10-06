@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Synthèse du contrat de restauration</title>
+<style>
+:root{
+  color-scheme:light;
+  --bg:#f4f4f2;--surface:#fcfcfb;--line:#e4e3de;--grid:#ecebe7;
+  --ink:#0b0b0b;--ink2:#52514e;--ink3:#7a7974;
+  --s1:#2a78d6;--s1-soft:#cde2fb;
+  --good:#0ca30c;--warning:#fab219;--serious:#ec835a;--critical:#d03b3b;
+  --accent:#2a78d6;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;--bg:#121211;--surface:#1a1a19;--line:#2e2e2b;--grid:#262624;
+  --ink:#ffffff;--ink2:#c3c2b7;--ink3:#8f8e86;--s1:#3987e5;--s1-soft:#1c3556;--accent:#3987e5}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#121211;--surface:#1a1a19;--line:#2e2e2b;--grid:#262624;
+  --ink:#ffffff;--ink2:#c3c2b7;--ink3:#8f8e86;--s1:#3987e5;--s1-soft:#1c3556;--accent:#3987e5}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding:14px 16px 0}
+header h1{font-size:1.15rem;margin:0;flex:1 1 280px}
+header .meta{color:var(--ink3);font-size:.85rem}
+button.print{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:6px 12px;font:inherit;cursor:pointer}
+nav{display:flex;gap:4px;padding:12px 16px 0;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+nav button{border:0;background:transparent;color:var(--ink2);font:inherit;font-weight:600;padding:8px 12px;border-bottom:2px solid transparent;cursor:pointer}
+nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+main{padding:16px}
+section.tab{display:none}
+section.tab.on{display:block}
+h2{font-size:1rem;margin:22px 0 10px}
+h2:first-child{margin-top:0}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.tile .v{font-size:1.9rem;font-weight:700;line-height:1.1}
+.tile .l{color:var(--ink2);font-size:.85rem}
+.tile .s{color:var(--ink3);font-size:.78rem;margin-top:2px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px}
+.card h3{margin:0 0 10px;font-size:.92rem}
+.card .note{color:var(--ink3);font-size:.8rem;margin-top:8px}
+.hbar{display:grid;grid-template-columns:minmax(90px,38%) 1fr 34px;align-items:center;gap:8px;margin:5px 0;font-size:.85rem}
+.hbar .lab{color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hbar .track{height:14px;position:relative}
+.hbar .bar{height:14px;background:var(--s1);border-radius:0 4px 4px 0;min-width:2px}
+.hbar .n{text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+.cols{display:flex;align-items:flex-end;gap:2px;height:150px;border-bottom:1px solid var(--line);padding-top:16px}
+.cols .c{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;position:relative}
+.cols .c .b{width:70%;max-width:38px;background:var(--s1);border-radius:4px 4px 0 0;min-height:2px}
+.cols .c .t{position:absolute;top:-2px;font-size:.75rem;color:var(--ink2)}
+.colx{display:flex;gap:2px;font-size:.72rem;color:var(--ink3)}
+.colx span{flex:1;text-align:center}
+table{width:100%;border-collapse:collapse;font-size:.84rem}
+th{text-align:left;color:var(--ink2);font-weight:600;border-bottom:1px solid var(--line);padding:6px 6px}
+td{border-bottom:1px solid var(--grid);padding:6px 6px;vertical-align:top}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.wrap{overflow-x:auto}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:.78rem;white-space:nowrap;color:var(--ink)}
+.badge::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--c,var(--ink3))}
+.st-crit{--c:var(--critical)}.st-ser{--c:var(--serious)}.st-warn{--c:var(--warning)}.st-good{--c:var(--good)}
+.demo-banner{margin:12px 16px 0;padding:8px 12px;border-radius:8px;background:color-mix(in srgb,var(--warning) 18%,transparent);color:var(--ink);font-size:.85rem}
+.empty{color:var(--ink3);font-style:italic;padding:8px 0}
+.denied{background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:14px;color:var(--ink2)}
+#tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--surface);font-size:.78rem;padding:5px 8px;border-radius:6px;opacity:0;transition:opacity .1s;z-index:9}
+.desc{max-width:420px;color:var(--ink2)}
+footer{color:var(--ink3);font-size:.75rem;padding:4px 16px 18px}
+@media print{
+  nav,button.print{display:none}
+  section.tab{display:block !important;break-before:page}
+  section.tab:first-of-type{break-before:auto}
+  body{background:#fff}
+  .card,.tile{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Synthèse du contrat de restauration — DSP API 2026-2037</h1>
+  <span class="meta" id="maj">Chargement…</span>
+  <button class="print" onclick="window.print()">Imprimer</button>
+</header>
+<div class="demo-banner" id="demo" hidden>Jeu de démonstration entièrement fictif : ouvert hors de Grist, le widget n'affiche aucune donnée réelle.</div>
+<nav role="tablist" id="tabs"></nav>
+<main id="main"></main>
+<footer>Données lues dans le document Grist avec vos droits d'accès : chacun ne voit que son périmètre. Période du contrat : depuis le 1er août 2026.</footer>
+<div id="tip" role="tooltip"></div>
+
+<script>
+const START = Date.UTC(2026,7,1)/1000;
+const TODAY = Math.floor(Date.now()/1000);
+const DAY = 86400;
+const CLOS = new Set(['Résolu','Resolu','Clôturé','Cloture','Clos']);
+const TABS = [['vue','Vue d\'ensemble'],['ecoles','Restauration scolaire'],['portage','Portage'],['echeances','Échéances du contrat'],['factu','Effectifs et facturation']];
+const MOIS = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
+
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fd = t => { if(!t) return ''; const d=new Date(t*1000); return d.toLocaleDateString('fr-FR',{timeZone:'UTC'}); };
+const mk = t => { const d=new Date(t*1000); return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0'); };
+const ml = k => { const [y,m]=k.split('-'); return MOIS[+m-1]+' '+y.slice(2); };
+const isOpen = r => !CLOS.has(r.Statut) && !r.Date_de_resolution;
+const count = (arr,f) => { const m=new Map(); arr.forEach(r=>{const k=f(r)||'(non renseigné)'; m.set(k,(m.get(k)||0)+1);}); return [...m.entries()].sort((a,b)=>b[1]-a[1]); };
+
+function toRows(t){ if(!t||!t.id) return []; const ks=Object.keys(t); return t.id.map((_,i)=>Object.fromEntries(ks.map(k=>[k,t[k][i]]))); }
+
+function hbars(entries,unit='signalement'){
+  if(!entries.length) return '<div class="empty">Aucune donnée.</div>';
+  const max=Math.max(...entries.map(e=>e[1]));
+  return entries.map(([k,v])=>`<div class="hbar"><span class="lab" title="${esc(k)}">${esc(k)}</span><span class="track"><div class="bar" style="width:${(v/max*100).toFixed(1)}%" data-tip="${esc(k)} : ${v} ${unit}${v>1?'s':''}"></div></span><span class="n">${v}</span></div>`).join('');
+}
+function columns(map,unit='signalement'){
+  const ks=[...map.keys()].sort(); if(!ks.length) return '<div class="empty">Aucune donnée.</div>';
+  const max=Math.max(...map.values());
+  return `<div class="cols">${ks.map(k=>`<div class="c"><span class="t" style="bottom:calc(${(map.get(k)/max*88).toFixed(1)}% + 2px);top:auto">${map.get(k).toLocaleString('fr-FR')}</span><div class="b" style="height:${(map.get(k)/max*88).toFixed(1)}%" data-tip="${ml(k)} : ${map.get(k).toLocaleString('fr-FR')} ${unit}${map.get(k)>1?'s':''}"></div></div>`).join('')}</div><div class="colx">${ks.map(k=>`<span>${ml(k)}</span>`).join('')}</div>`;
+}
+function byMonth(arr,dateKey,val){ const m=new Map(); arr.forEach(r=>{ if(!r[dateKey]) return; const k=mk(r[dateKey]); m.set(k,(m.get(k)||0)+(val?(+r[val]||0):1)); }); return m; }
+function tile(v,l,s='',cls=''){ return `<div class="tile"><div class="v">${v}</div><div class="l ${cls}">${l}</div>${s?`<div class="s">${s}</div>`:''}</div>`; }
+function gravBadge(g){ const c={Critique:'st-crit',Majeur:'st-ser',Mineur:'st-warn'}[g]||''; return g?`<span class="badge ${c}">${esc(g)}</span>`:''; }
+function statutBadge(r){ if(!isOpen(r)) return `<span class="badge st-good">${esc(r.Statut||'Résolu')}</span>`; if(r.En_retard) return `<span class="badge st-crit">${esc(r.Statut||'Signalé')} · en retard</span>`; return `<span class="badge st-warn">${esc(r.Statut||'Signalé')}</span>`; }
+function trunc(s,n=140){ s=String(s||''); return s.length>n?s.slice(0,n)+'…':s; }
+
+function signalTable(rows,withSite){
+  if(!rows.length) return '<div class="empty">Aucun signalement ouvert.</div>';
+  return `<div class="wrap"><table><thead><tr><th>Date</th>${withSite?'<th>Site</th>':'<th>Réf.</th>'}<th>Catégorie</th><th>Gravité</th><th>Constat</th><th>Statut</th><th>Réponse API</th></tr></thead><tbody>${
+    rows.sort((a,b)=>(a.Date_du_constat||0)-(b.Date_du_constat||0)).map(r=>`<tr><td>${fd(r.Date_du_constat)}</td><td>${esc(withSite?(r.Ecole||r.Office):(r.Beneficiaire_ref||''))}</td><td>${esc(r.Categorie)}</td><td>${gravBadge(r.Gravite)}</td><td class="desc">${esc(trunc(r.Description))}</td><td>${statutBadge(r)}</td><td>${r.Reponse_delegataire?'Oui':'—'}</td></tr>`).join('')}</tbody></table></div>`;
+}
+
+function echeanceEtat(e){
+  if(e.Date_realisation) return ['Réalisé','st-good'];
+  if(/non réalis/i.test(e.Statut||'')) return ['Non réalisé','st-crit'];
+  if(e.Date_echeance && e.Date_echeance<TODAY) return ['Dépassée','st-crit'];
+  if(e.Date_echeance && e.Date_echeance<TODAY+60*DAY) return ['Dans les 60 jours','st-warn'];
+  if(/vérifier|demander/i.test(e.Statut||'')) return [e.Statut,'st-ser'];
+  if(!e.Date_echeance) return [e.Statut||'Permanente',''];
+  return ['À venir',''];
+}
+
+let D = {};
+async function load(){
+  const names=['Dysfonctionnements','Echeances','Effectifs_Facturation','Releves_livraison_portage'];
+  for(const n of names){ try{ D[n]=toRows(await grist.docApi.fetchTable(n)); }catch(e){ D[n]=null; } }
+  render();
+}
+
+function render(){
+  const all=(D.Dysfonctionnements||[]).filter(r=>r.Date_du_constat ? r.Date_du_constat>=START : (r.Delegataire==='API'||r.Service==='Portage CCAS'));
+  const ecoles=all.filter(r=>r.Service!=='Portage CCAS');
+  const portage=all.filter(r=>r.Service==='Portage CCAS');
+  const ech=D.Echeances||[]; const ef=D.Effectifs_Facturation||[]; const rel=D.Releves_livraison_portage||[];
+  const P={};
+
+  // --- Vue d'ensemble
+  const open=all.filter(isOpen), late=open.filter(r=>r.En_retard), crit=open.filter(r=>r.Gravite==='Critique'), sansRep=open.filter(r=>!r.Reponse_delegataire);
+  const echEtat=ech.map(e=>[e,echeanceEtat(e)]);
+  const echKO=echEtat.filter(([,s])=>s[1]==='st-crit');
+  const svc=[['Restauration scolaire et ALSH',ecoles],['Portage à domicile',portage]];
+  P.vue=`<h2>Signalements depuis le 1er août 2026</h2>
+  <div class="tiles">${tile(all.length,'signalements enregistrés')}${tile(open.length,'encore ouverts')}${tile(late.length,'ouverts depuis plus de 7 jours','','')}${tile(crit.length,'critiques non résolus')}${tile(sansRep.length,'ouverts sans réponse d\'API')}</div>
+  <h2>Par service</h2>
+  <div class="card wrap"><table><thead><tr><th>Service</th><th class="num">Total</th><th class="num">Ouverts</th><th class="num">En retard</th><th class="num">Critiques ouverts</th><th class="num">Délai moyen de résolution</th></tr></thead><tbody>${
+    svc.map(([n,a])=>{const o=a.filter(isOpen);const d=a.map(r=>r.Delai_traitement).filter(x=>typeof x==='number');return `<tr><td>${n}</td><td class="num">${a.length}</td><td class="num">${o.length}</td><td class="num">${o.filter(r=>r.En_retard).length}</td><td class="num">${o.filter(r=>r.Gravite==='Critique').length}</td><td class="num">${d.length?Math.round(d.reduce((x,y)=>x+y,0)/d.length)+' j':'—'}</td></tr>`;}).join('')}</tbody></table></div>
+  <h2>Obligations du contrat</h2>
+  ${D.Echeances===null?'<div class="denied">Les échéances ne sont pas accessibles avec vos droits.</div>':`<div class="tiles">${tile(ech.length,'obligations suivies')}${tile(echKO.length,'non réalisées ou dépassées')}${tile(echEtat.filter(([,s])=>s[0]==='Dans les 60 jours').length,'à échéance dans 60 jours')}${tile(echEtat.filter(([,s])=>s[0]==='Réalisé').length,'réalisées')}</div>
+  ${echKO.length?`<div class="card" style="margin-top:10px"><h3>À traiter en priorité</h3>${echKO.map(([e,s])=>`<div style="margin:4px 0"><span class="badge ${s[1]}">${esc(s[0])}</span> ${esc(e.Intitule)} <span style="color:var(--ink3)">— ${esc(e.Reference)}</span></div>`).join('')}</div>`:''}`}`;
+
+  // --- Écoles
+  const eo=ecoles.filter(isOpen);
+  P.ecoles=`<div class="tiles">${tile(ecoles.length,'signalements depuis le 1er août')}${tile(eo.length,'encore ouverts')}${tile(eo.filter(r=>r.En_retard).length,'en retard')}${tile(ecoles.filter(r=>r.Responsable_identifie==='Prestataire').length,'imputés au prestataire')}</div>
+  <div class="grid2" style="margin-top:12px">
+   <div class="card"><h3>Par site</h3>${hbars(count(ecoles,r=>r.Ecole||r.Office))}</div>
+   <div class="card"><h3>Par catégorie</h3>${hbars(count(ecoles,r=>r.Categorie))}</div>
+   <div class="card"><h3>Par mois</h3>${columns(byMonth(ecoles,'Date_du_constat'))}</div>
+   <div class="card"><h3>Par gravité</h3>${hbars(count(ecoles,r=>r.Gravite))}</div>
+  </div>
+  <h2>Signalements ouverts</h2><div class="card">${signalTable(eo,true)}</div>`;
+
+  // --- Portage
+  const po=portage.filter(isOpen);
+  const efP=ef.filter(r=>String(r.Site||'').startsWith('POR'));
+  const repasMois=new Map(efP.filter(r=>r.Mois).map(r=>[mk(r.Mois),+r.Reels||0]));
+  P.portage=`<div class="tiles">${tile(portage.length,'signalements et anomalies')}${tile(po.length,'encore ouverts')}${tile(po.filter(r=>!r.Reponse_delegataire).length,'ouverts sans réponse d\'API')}${tile(portage.filter(r=>r.Responsable_identifie==='Prestataire').length,'imputés au prestataire')}</div>
+  <div class="grid2" style="margin-top:12px">
+   <div class="card"><h3>Par catégorie</h3>${hbars(count(portage,r=>r.Categorie))}</div>
+   <div class="card"><h3>Par mois de constat</h3>${columns(byMonth(portage,'Date_du_constat'))}<div class="note">Les fiches sans date ne figurent pas ici.</div></div>
+   <div class="card"><h3>Responsable identifié</h3>${hbars(count(portage,r=>r.Responsable_identifie))}</div>
+   <div class="card"><h3>Repas livrés par mois (décompte CCAS)</h3>${D.Effectifs_Facturation===null?'<div class="denied">Non accessible avec vos droits.</div>':columns(repasMois,'repas')}</div>
+   <div class="card"><h3>Heures de livraison relevées</h3>${D.Releves_livraison_portage===null?'<div class="denied">Non accessible avec vos droits.</div>':hbars((()=>{const m=new Map();rel.forEach(r=>m.set(r.Creneau,(m.get(r.Creneau)||0)+(+r.Livraisons||0)));const ord=['6h30 - 8h00','8h00 - 9h00','9h00 - 10h00','10h00 - 11h00','11h00 - 12h00','12h00 - 12h30','Après 12h30','Non livré'];return [...m.entries()].sort((a,b)=>ord.indexOf(a[0])-ord.indexOf(b[0]));})(),'livraison')}<div class="note">Plage prévue par l'offre : 7 h 30 – 12 h 00 (annexe C_16).</div></div>
+  </div>
+  <h2>Signalements ouverts</h2><div class="card">${signalTable(po,false)}</div>`;
+
+  // --- Échéances
+  P.echeances = D.Echeances===null?'<div class="denied">Les échéances ne sont pas accessibles avec vos droits.</div>':
+  `<div class="card wrap"><table><thead><tr><th>État</th><th>Obligation</th><th>Référence</th><th>Échéance</th><th>Référent Ville</th><th>Observations</th></tr></thead><tbody>${
+    echEtat.sort((a,b)=>{const o={'st-crit':0,'st-ser':1,'st-warn':2,'':3,'st-good':4};return (o[a[1][1]]-o[b[1][1]])||((a[0].Date_echeance||9e9)-(b[0].Date_echeance||9e9));})
+    .map(([e,s])=>`<tr><td><span class="badge ${s[1]}">${esc(s[0])}</span></td><td>${esc(e.Intitule)}</td><td style="color:var(--ink2)">${esc(e.Reference)}</td><td>${fd(e.Date_echeance)||'—'}</td><td>${esc(e.Referent_Ville)||'<span style="color:var(--ink3)">à désigner</span>'}</td><td class="desc">${esc(trunc(e.Observations,160))}</td></tr>`).join('')}</tbody></table></div>`;
+
+  // --- Facturation
+  P.factu = D.Effectifs_Facturation===null?'<div class="denied">Les données d\'effectifs et de facturation ne sont pas accessibles avec vos droits.</div>':
+  (ef.length?`<div class="card wrap"><table><thead><tr><th>Mois</th><th>Site</th><th>Convives</th><th class="num">Prévisionnels</th><th class="num">Réels</th><th class="num">Facturés</th><th class="num">Écart facturés − réels</th><th>Observations</th></tr></thead><tbody>${
+    ef.sort((a,b)=>(a.Mois||0)-(b.Mois||0)).map(r=>{const e=(r.Factures!=null&&r.Reels!=null&&r.Factures!==''&&r.Reels!=='')?(r.Factures-r.Reels):null;return `<tr><td>${r.Mois?ml(mk(r.Mois)):''}</td><td>${esc(r.Site)}</td><td>${esc(r.Categorie_convives)}</td><td class="num">${r.Previsionnels??''}</td><td class="num">${r.Reels??''}</td><td class="num">${r.Factures??''}</td><td class="num">${e===null?'—':(e>0?'+':'')+e}</td><td class="desc">${esc(trunc(r.Anomalie,120))}</td></tr>`;}).join('')}</tbody></table>
+    <div class="note">Les colonnes « facturés » se rempliront avec les exports mensuels du délégataire.</div></div>`:'<div class="empty">Aucune donnée pour l\'instant : la table se remplira avec les exports mensuels du délégataire.</div>');
+
+  const main=document.getElementById('main');
+  const cur=document.querySelector('nav button[aria-selected="true"]')?.dataset.t||'vue';
+  main.innerHTML=TABS.map(([k,l])=>`<section class="tab ${k===cur?'on':''}" data-t="${k}"><h2 class="ptitle" style="display:none">${l}</h2>${P[k]}</section>`).join('');
+  document.getElementById('maj').textContent='Mis à jour le '+new Date().toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'});
+}
+
+function initTabs(){
+  const nav=document.getElementById('tabs');
+  nav.innerHTML=TABS.map(([k,l],i)=>`<button role="tab" data-t="${k}" aria-selected="${i===0}">${l}</button>`).join('');
+  nav.onclick=e=>{const b=e.target.closest('button');if(!b)return;nav.querySelectorAll('button').forEach(x=>x.setAttribute('aria-selected',x===b));document.querySelectorAll('section.tab').forEach(s=>s.classList.toggle('on',s.dataset.t===b.dataset.t));};
+}
+// infobulle
+const tip=document.getElementById('tip');
+document.addEventListener('mousemove',e=>{const t=e.target.closest('[data-tip]');if(!t){tip.style.opacity=0;return;}tip.textContent=t.dataset.tip;tip.style.opacity=1;tip.style.left=Math.min(e.clientX+12,innerWidth-tip.offsetWidth-8)+'px';tip.style.top=(e.clientY+14)+'px';});
+window.addEventListener('beforeprint',()=>document.querySelectorAll('.ptitle').forEach(h=>h.style.display='block'));
+window.addEventListener('afterprint',()=>document.querySelectorAll('.ptitle').forEach(h=>h.style.display='none'));
+
+initTabs();
+let timer=null;
+
+// --- Jeu de démonstration entièrement inventé (affiché hors de Grist)
+function demoData(){
+  const ts=(y,m,d)=>Date.UTC(y,m-1,d)/1000; let seed=7; const rnd=a=>a[(seed=(seed*9301+49297)%233280)%a.length];
+  const D=[];
+  for(let i=0;i<24;i++) D.push({Date_du_constat:ts(2026,8+i%3,1+(i*5)%27),Service:'Education',Ecole:rnd(['École A','École B','École C','École D']),Categorie:rnd(['Plat','Quantités','Pain','Livraison','Température']),Gravite:rnd(['Critique','Majeur','Mineur','Mineur']),Statut:rnd(['Signalé','Résolu','Résolu','En cours de traitement']),En_retard:i%6===0,Description:'Exemple fictif de constat',Delai_traitement:i%2?4:null,Responsable_identifie:rnd(['Prestataire','Commune','Indéterminé']),Reponse_delegataire:i%3?'Réponse fictive':''});
+  for(let i=0;i<36;i++) D.push({Date_du_constat:i%9===0?null:ts(2026,8+i%2,1+(i*7)%27),Service:'Portage CCAS',Beneficiaire_ref:'X-'+String(100+i),Categorie:rnd(['Repas non livré','Accès au domicile','Contenants (retour des bacs)','Retard de livraison','Autre']),Gravite:rnd(['Critique','Majeur','Mineur']),Statut:['Résolu','Résolu','Signalé','En cours de traitement'][i%4],En_retard:i%7===0,Description:'Exemple fictif de difficulté de livraison',Delai_traitement:i%2?6:null,Responsable_identifie:rnd(['Prestataire','Usager ou famille']),Reponse_delegataire:i%2?'Réponse fictive':''});
+  const E=[{Intitule:'Exemple : outil partagé de suivi des repas',Reference:'Contrat (fictif)',Date_echeance:ts(2026,9,1),Statut:'Non réalisé',Observations:'Démonstration'},{Intitule:'Exemple : rapport annuel',Reference:'Contrat (fictif)',Date_echeance:ts(2027,5,31),Statut:'À venir'},{Intitule:'Exemple : bilan mensuel',Reference:'Contrat (fictif)',Date_echeance:ts(2026,11,15),Statut:'À venir'},{Intitule:'Exemple : obligation permanente',Reference:'Annexe (fictive)',Statut:'En vigueur'},{Intitule:'Exemple : pièce à demander',Reference:'Contrat (fictif)',Statut:'À demander'}];
+  const F=[{Mois:ts(2026,8,1),Site:'POR — Portage (fictif)',Categorie_convives:'Seniors',Reels:1500,Anomalie:'Donnée fictive'},{Mois:ts(2026,9,1),Site:'POR — Portage (fictif)',Categorie_convives:'Seniors',Reels:1620}];
+  const R=[['6h30 - 8h00',12],['8h00 - 9h00',20],['9h00 - 10h00',18],['10h00 - 11h00',15],['11h00 - 12h00',9]].map(([c,n])=>({Creneau:c,Livraisons:n}));
+  return {Dysfonctionnements:D,Echeances:E,Effectifs_Facturation:F,Releves_livraison_portage:R};
+}
+function origineGrist(){
+  try{ if(document.referrer) return new URL(document.referrer).origin; }catch(e){}
+  return null;
+}
+function chargerScript(src){ return new Promise((ok,ko)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=ko;document.head.appendChild(s);}); }
+async function demarrer(){
+  const origine = window.self===window.top ? null : origineGrist();
+  if(!origine){ document.getElementById('demo').hidden=false; D=demoData(); render(); return; }   // hors de Grist : démonstration
+  await chargerScript(origine+'/grist-plugin-api.js');
+  grist.ready({requiredAccess:'full'});
+  grist.onRecords(()=>{clearTimeout(timer);timer=setTimeout(load,400);});
+  load();
+}
+demarrer();
+</script>
+</body>
+</html>
