@@ -10,6 +10,7 @@ comme **vues personnalisées** (« custom widgets »).
 | `reconciliation-investissement` | Rapproche l'extraction comptable Grand Angle et le suivi opérationnel des services techniques | `https://ville-du-bouscat.github.io/grist-widgets/reconciliation-investissement/` |
 | `dysfonctionnements-synthese` | Tableau de bord, liste de travail et synthèse de comité pour le suivi des dysfonctionnements de la restauration scolaire | `https://ville-du-bouscat.github.io/grist-widgets/dysfonctionnements-synthese/` |
 | `suivi-eau-synthese` | Synthèse du suivi de l'eau potable : fuites en attente de vérification, récurrences, consommations relevées du parc communal | `https://ville-du-bouscat.github.io/grist-widgets/suivi-eau-synthese/` |
+| `suivi-contrat-synthese` | Synthèse du contrat de restauration (DSP API) : signalements des écoles et du portage, échéances contractuelles, effectifs et facturation | `https://ville-du-bouscat.github.io/grist-widgets/suivi-contrat-synthese/` |
 
 Ouverts hors de Grist, ces widgets affichent un jeu de démonstration **fictif** — voir l'avertissement ci-dessous.
 
@@ -57,6 +58,18 @@ sortir une ligne de la file.
 
 Le widget tolère qu'une colonne ait été renommée dans le document, et accepte les dates aussi
 bien en texte `AAAA-MM-JJ` qu'en type Date.
+
+### `suivi-contrat-synthese`
+
+Vue de lecture du suivi du contrat de restauration municipale (DSP API Restauration, 2026-2037), dans le document « Suivi dysfonctionnements restauration ». Cinq onglets, alimentés par quatre tables — Dysfonctionnements, Echeances, Effectifs_Facturation et Releves_livraison_portage :
+
+- **Vue d'ensemble** — signalements depuis le 1er août 2026 (ouverts, en retard, critiques, sans réponse du délégataire), comparaison écoles / portage, obligations du contrat non réalisées ou dépassées.
+- **Restauration scolaire** — répartition par site, catégorie, mois et gravité ; signalements ouverts.
+- **Portage** — catégories, mois, responsable identifié, repas livrés par mois, heures de livraison relevées ; anomalies ouvertes, identifiées par une référence et jamais par un nom.
+- **Échéances du contrat** — les obligations contractuelles triées par urgence, avec leur référent Ville.
+- **Effectifs et facturation** — repas réels et facturés par mois et par site, alimentés par les exports du délégataire.
+
+Comme les autres widgets, il lit les données avec les droits de la personne qui le consulte : l'équipe du portage n'y voit que le portage, un responsable d'office que son office. Il n'écrit rien. Un bouton imprime les cinq onglets à la suite.
 
 ## ⚠ Ce dépôt est public — règle absolue
 
@@ -149,6 +162,8 @@ possible. **Il n'écrit rien.**
 ├── dysfonctionnements-synthese/
 │   └── index.html
 ├── suivi-eau-synthese/
+│   └── index.html
+├── suivi-contrat-synthese/
 │   └── index.html
 └── .github/workflows/pages.yml         publication automatique
 ```
