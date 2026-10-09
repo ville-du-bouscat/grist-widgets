@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Main courante de crise — synthèse (widget Grist)</title>
+<style>
+:root{
+  color-scheme: light dark;
+  --plane:#f9f9f7; --surface:#fcfcfb; --raised:#ffffff; --line:#e4e3de;
+  --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a;
+  --good:#0c8a0c; --warn:#c98a00; --serious:#ec835a; --critical:#d03b3b;
+  --e-atraiter:var(--critical); --e-encours:#e0a100; --e-traite:var(--good); --e-clos:#9a9892;
+  --shadow:0 1px 2px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --plane:#141413; --surface:#1c1c1a; --raised:#232321; --line:#363531;
+    --ink:#f2f1ed; --ink2:#c2c0b8; --muted:#8f8d85;
+    --s1:#5ea0f0; --s2:#f08a5d; --s3:#3ccb97;
+    --good:#4cc24c; --warn:#f0b72f; --serious:#f29a78; --critical:#ee6a6a;
+    --e-encours:#f0b72f; --e-clos:#7d7b74;
+    --shadow:none;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--plane);color:var(--ink);font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:1200px;margin:0 auto;padding:16px 20px 48px}
+header.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;margin-bottom:14px}
+header.top h1{font-size:20px;line-height:1.25;margin:0}
+header.top .org{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);font-weight:600}
+header.top .sub{color:var(--ink2);margin-top:2px}
+.ctrl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+select,input[type=search],button{font:inherit;color:var(--ink);background:var(--raised);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+button{cursor:pointer}
+button:hover,select:hover{border-color:var(--muted)}
+button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--s1);outline-offset:2px}
+nav.tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--line);margin-bottom:16px}
+nav.tabs button{border:0;border-bottom:3px solid transparent;border-radius:0;background:transparent;padding:8px 14px;color:var(--ink2);font-weight:600}
+nav.tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--s1)}
+section[hidden]{display:none!important}
+.banner{background:var(--surface);border:1px dashed var(--muted);border-radius:8px;padding:8px 12px;margin-bottom:14px;color:var(--ink2);font-size:13px}
+.banner.err{border-color:var(--critical);color:var(--critical)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow)}
+.tile .k{font-size:12px;color:var(--ink2);font-weight:600}
+.tile .v{font-size:30px;font-weight:700;line-height:1.15;font-variant-numeric:tabular-nums}
+.tile .n{font-size:12px;color:var(--muted)}
+.tile.alert .v{color:var(--e-atraiter)}
+.tile.sm .v{font-size:22px;padding-top:7px}
+body.affichage .tile.sm .v{font-size:30px;padding-top:9px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px;margin-bottom:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow);min-width:0}
+.card h2{font-size:14px;margin:0 0 10px}
+.card h2 small{font-weight:400;color:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:12px;color:var(--ink2)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.stack{display:flex;height:22px;border-radius:6px;overflow:hidden;background:var(--line)}
+.stack>span{display:block;min-width:2px}
+.rows{display:grid;gap:7px}
+.row{display:grid;grid-template-columns:minmax(110px,170px) 1fr 34px;gap:8px;align-items:center;font-size:13px}
+.row .lab{color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.bar{display:flex;height:14px;border-radius:4px;overflow:hidden;background:transparent}
+.bar>span{display:block}
+.c-at{background:var(--e-atraiter)} .c-en{background:var(--e-encours)} .c-tr{background:var(--e-traite)} .c-cl{background:var(--e-clos)} .c-s1{background:var(--s1)}
+svg.chart{width:100%;height:auto;display:block}
+svg.chart text{fill:var(--muted);font:11px system-ui,sans-serif}
+svg.chart .bar1{fill:var(--s1)} svg.chart .bar2{fill:var(--s2)} svg.chart .axis{stroke:var(--line)}
+.chip{display:inline-block;border-radius:999px;padding:1px 9px;font-size:12px;font-weight:600;border:1px solid currentColor;white-space:nowrap}
+.chip.at{color:var(--e-atraiter)} .chip.en{color:var(--warn)} .chip.tr{color:var(--e-traite)} .chip.cl{color:var(--muted)}
+.chip.cel{color:var(--ink2);border-color:var(--line);background:var(--plane);font-weight:500}
+.star{color:var(--s2);font-weight:700}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.toolbar label{display:flex;gap:6px;align-items:center;color:var(--ink2)}
+.entry{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:8px;box-shadow:var(--shadow)}
+.entry.s-at{border-left-color:var(--e-atraiter)} .entry.s-en{border-left-color:var(--e-encours)} .entry.s-tr{border-left-color:var(--e-traite)} .entry.s-cl{border-left-color:var(--e-clos)}
+.entry .hd{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;color:var(--ink2);font-size:13px}
+.entry .hd .t{font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.entry .info{margin:6px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.entry .act{margin:6px 0 0;color:var(--ink2);white-space:pre-wrap;overflow-wrap:anywhere}
+.entry .act b{color:var(--ink)}
+.entry .meta{margin-top:6px;font-size:12px;color:var(--muted)}
+.entry .more{margin-top:4px;padding:0;border:0;background:none;color:var(--s1);font-size:12px}
+.group h3{font-size:14px;margin:18px 0 8px;display:flex;gap:8px;align-items:center}
+.group h3 .cnt{color:var(--muted);font-weight:400}
+.empty{color:var(--muted);padding:18px;text-align:center;border:1px dashed var(--line);border-radius:10px}
+.safer{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:10px}
+.safer>div{background:var(--plane);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.safer .l{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:var(--s1);color:#fff;font-weight:700;margin-bottom:4px}
+.safer p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+footer{margin-top:28px;color:var(--muted);font-size:12px}
+body.in-grist .banner.demo,body.in-grist footer{display:none}
+/* Mode affichage (écran mural) */
+body.affichage{font-size:17px}
+body.affichage .wrap{max-width:none;padding:14px 22px}
+body.affichage nav.tabs,body.affichage .toolbar,body.affichage footer{display:none}
+body.affichage .tile .v{font-size:44px}
+body.affichage header.top h1{font-size:28px}
+.wall{display:grid;grid-template-columns:1.1fr 1fr;gap:14px}
+@media (max-width:820px){.wall{grid-template-columns:1fr}}
+.mini{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;padding:7px 0;border-bottom:1px solid var(--line)}
+.mini:last-child{border:0}
+.mini .t{font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink)}
+.mini .x{overflow-wrap:anywhere}
+.mini .y{grid-column:2;font-size:12px;color:var(--muted)}
+@media print{body{background:#fff;color:#000}.ctrl,nav.tabs,.banner,.toolbar{display:none}.card,.tile,.entry{box-shadow:none;break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="banner" class="banner" hidden></div>
+  <header class="top">
+    <div>
+      <div class="org" id="org"></div>
+      <h1 id="titre">Main courante de crise</h1>
+      <div class="sub" id="sous-titre"></div>
+    </div>
+    <div class="ctrl">
+      <label for="sel-episode" class="sr" style="position:absolute;left:-9999px">Épisode</label>
+      <select id="sel-episode" aria-label="Épisode"></select>
+      <button id="btn-affichage" type="button" title="Affichage grand écran (écran mural, salle de crise)">Mode affichage</button>
+    </div>
+  </header>
+  <nav class="tabs" role="tablist" id="tabs">
+    <button role="tab" data-tab="synthese" aria-selected="true">Synthèse</button>
+    <button role="tab" data-tab="atraiter" aria-selected="false">À traiter</button>
+    <button role="tab" data-tab="journal" aria-selected="false">Journal</button>
+    <button role="tab" data-tab="safer" aria-selected="false">Points de situation</button>
+  </nav>
+  <section id="tab-synthese"></section>
+  <section id="tab-atraiter" hidden></section>
+  <section id="tab-journal" hidden></section>
+  <section id="tab-safer" hidden></section>
+  <section id="tab-affichage" hidden></section>
+  <footer>Lecture seule : ce widget n'écrit jamais dans le document. Les données restent dans Grist et s'affichent uniquement dans votre navigateur, selon vos droits d'accès au document.</footer>
+</div>
+<noscript>Ce widget nécessite JavaScript.</noscript>
+
+<script>
+"use strict";
+/* ============ Paramètres (en tête de fichier, à adapter si besoin) ============ */
+const TABLES = { main: "Main_courante", params: "Parametres" };   // noms des tables Grist
+const GRIST_URL_MANUEL = "";                                       // ex. "https://grist.exemple.fr" si le référent n'est pas transmis
+const CELLULES_ORDRE = ["Décision-Pilotage","Anticipation","Renseignement","Communication","Intervention — Population","Intervention — Logistique","Intervention — Sécurité"];
+const ETATS_ORDRE = ["À traiter","En cours","Traité","Clos sans suite"];
+const ETATS_FERMES = ["Traité","Clos sans suite"];                 // tout le reste est considéré « ouvert »
+const SAFER_RE = /^\s*POINT DE SITUATION/i;                        // convention de saisie des points de situation
+const SAFER_LETTRES = ["S","A","F","E","R"];                       // libellés à compléter par l'organisation (initiales affichées seules par défaut)
+const SAFER_LIBELLES = { S:"", A:"", F:"", E:"", R:"" };
+const LIGNES_JOURNAL = 120;                                        // entrées affichées avant « Afficher plus »
+
+/* ============ Utilitaires ============ */
+const Q = new URLSearchParams(location.search);
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const norm = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"");
+function pick(cols, noms){                                          // retrouve une colonne même renommée / accentuée
+  const m = {}; for (const k of Object.keys(cols)) m[norm(k)] = k;
+  for (const n of noms){ const k = m[norm(n)]; if (k) return cols[k]; }
+  return null;
+}
+function versDate(v){                                               // AAAA-MM-JJ, JJ/MM/AAAA ou secondes epoch (type Date Grist)
+  if (v === null || v === undefined || v === "") return "";
+  if (typeof v === "number") return isFinite(v) ? new Date(v*1000).toISOString().slice(0,10) : "";
+  const s = String(v).trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return m[1]+"-"+m[2]+"-"+m[3];
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if (m) return m[3]+"-"+m[2].padStart(2,"0")+"-"+m[1].padStart(2,"0");
+  return "";
+}
+function minutes(h){ const m = String(h||"").trim().match(/^(\d{1,2})\s*[:h]\s*(\d{2})$/); return m ? (+m[1])*60 + (+m[2]) : null; }
+const pad = n => String(n).padStart(2,"0");
+const fmtHeure = h => { const m = minutes(h); return m === null ? "" : pad(Math.floor(m/60))+":"+pad(m%60); };
+const fmtDate = iso => iso ? iso.slice(8,10)+"/"+iso.slice(5,7) : "";
+const jourLong = iso => iso ? new Date(iso+"T12:00:00").toLocaleDateString("fr-FR",{weekday:"short",day:"2-digit",month:"2-digit"}) : "";
+const classeEtat = e => e==="À traiter"?"at" : e==="En cours"?"en" : e==="Traité"?"tr" : ETATS_FERMES.includes(e)?"cl" : "at";
+const estOuvert = r => !ETATS_FERMES.includes(r.etat);
+const plur = (n,s,p) => n+" "+(n>1?(p||s+"s"):s);
+
+/* ============ Lecture des données ============ */
+function normaliser(cols){
+  const ids = cols.id || [];
+  const C = {
+    date:pick(cols,["Date"]), heure:pick(cols,["Heure"]), emetteur:pick(cols,["Emetteur","Émetteur"]),
+    canal:pick(cols,["Canal"]), lieu:pick(cols,["Lieu"]), cellule:pick(cols,["Cellule"]),
+    info:pick(cols,["Information","Info"]), action:pick(cols,["Action"]), etat:pick(cols,["Etat","État"]),
+    evt:pick(cols,["Evt_significatif","Evt significatif","Evenement significatif"]), cloture:pick(cols,["Cloture","Clôture"]),
+    saisi:pick(cols,["Saisi_par","Saisi par"]), episode:pick(cols,["Episode","Épisode"])
+  };
+  const g = (a,i) => a ? a[i] : undefined;
+  const rows = [];
+  for (let i=0;i<ids.length;i++){
+    const r = {
+      id: ids[i], date: versDate(g(C.date,i)), heure: String(g(C.heure,i)||"").trim(),
+      emetteur: g(C.emetteur,i)||"", canal: g(C.canal,i)||"", lieu: g(C.lieu,i)||"", cellule: g(C.cellule,i)||"",
+      info: g(C.info,i)||"", action: g(C.action,i)||"", etat: g(C.etat,i)||"À traiter",
+      evt: g(C.evt,i)===true || String(g(C.evt,i)).toUpperCase()==="OUI", cloture: g(C.cloture,i)||"",
+      saisi: g(C.saisi,i)||"", episode: String(g(C.episode,i)||"").trim()
+    };
+    if (!r.info && !r.date) continue;                               // ligne vide (ex. ligne d'ajout)
+    r.min = minutes(r.heure);
+    r.cle = (r.date||"9999-99-99") + " " + pad(Math.floor((r.min===null?1440:r.min)/60)) + ":" + pad((r.min===null?0:r.min)%60) + " " + String(r.id).padStart(8,"0");
+    r.safer = SAFER_RE.test(r.info);
+    rows.push(r);
+  }
+  rows.sort((a,b)=> a.cle < b.cle ? -1 : a.cle > b.cle ? 1 : 0);
+  return rows;
+}
+function lireParams(cols){
+  if (!cols) return {};
+  const ev = pick(cols,["Evenement","Événement"]), ac = pick(cols,["Activation"]), og = pick(cols,["Organisation","Collectivite","Commune"]);
+  const n = (cols.id||[]).length;
+  for (let i=0;i<n;i++){
+    const o = { evenement: ev?ev[i]:"", activation: ac?ac[i]:"", organisation: og?og[i]:"" };
+    if (o.evenement || o.activation || o.organisation) return o;
+  }
+  return {};
+}
+
+/* ============ État de l'interface ============ */
+const S = { rows:[], params:{}, episode:Q.get("episode")||"", onglet:"synthese", affichage:Q.get("affichage")==="1",
+            f:{ cellule:"", etat:"", evt:false, q:"", ordre:"desc", limite:LIGNES_JOURNAL }, maj:null, mode:"" };
+
+function episodes(){
+  const m = new Map();
+  for (const r of S.rows){ if (!r.episode) continue; const d=m.get(r.episode)||""; if (r.date>d) m.set(r.episode,r.date); else if(!m.has(r.episode)) m.set(r.episode,d); }
+  return [...m.entries()].sort((a,b)=> a[1]<b[1]?1:-1).map(x=>x[0]);          // le plus récent d'abord
+}
+function lignes(){
+  if (S.episode === "*" || !S.episode) return S.rows;
+  return S.rows.filter(r => r.episode === S.episode);
+}
+function stats(rows){
+  const o = { n:rows.length, etat:{}, cel:{}, canal:{}, evt:0, ouvert:0, premier:"", dernier:null };
+  for (const r of rows){
+    o.etat[r.etat] = (o.etat[r.etat]||0)+1;
+    const c = r.cellule || "(non précisée)"; (o.cel[c] ||= {at:0,en:0,fermes:0,n:0}); o.cel[c].n++;
+    if (r.etat==="À traiter") o.cel[c].at++; else if (r.etat==="En cours") o.cel[c].en++; else if (ETATS_FERMES.includes(r.etat)) o.cel[c].fermes++; else o.cel[c].at++;
+    const k = r.canal || "(non précisé)"; o.canal[k] = (o.canal[k]||0)+1;
+    if (r.evt) o.evt++; if (estOuvert(r)) o.ouvert++;
+    if (r.date && (!o.premier || r.date < o.premier)) o.premier = r.date;
+    if (r.date && (!o.dernier || r.cle > o.dernier.cle)) o.dernier = r;
+  }
+  o.jours = (o.premier && o.dernier) ? Math.round((new Date(o.dernier.date)-new Date(o.premier))/86400000)+1 : 0;
+  return o;
+}
+function ordreCellules(cel){
+  const inconnus = Object.keys(cel).filter(c=>!CELLULES_ORDRE.includes(c)).sort();
+  return [...CELLULES_ORDRE.filter(c=>cel[c]), ...inconnus];
+}
+
+/* ============ Rendu ============ */
+function chipEtat(e){ return `<span class="chip ${classeEtat(e)}">${esc(e)}</span>`; }
+function entree(r, opt={}){
+  const info = r.info || "";
+  const long = info.length > 420 && !opt.complet;
+  const id = "e"+r.id;
+  return `<article class="entry s-${classeEtat(r.etat)}">
+    <div class="hd">
+      <span class="t">${esc(fmtDate(r.date))} ${r.min===null?`<span title="heure à compléter">—:—</span>`:esc(fmtHeure(r.heure))}</span>
+      ${r.cellule?`<span class="chip cel">${esc(r.cellule)}</span>`:""}
+      ${chipEtat(r.etat)}
+      ${r.evt?`<span class="star" title="Événement significatif">★ Événement significatif</span>`:""}
+      ${r.safer?`<span class="chip cel">Point de situation</span>`:""}
+    </div>
+    <p class="info" ${long?`data-full="${esc(info)}"`:""}>${esc(long?info.slice(0,420)+"…":info)}</p>
+    ${long?`<button class="more" type="button" data-more="1">Lire la suite</button>`:""}
+    ${r.action?`<p class="act"><b>Action :</b> ${esc(r.action)}</p>`:""}
+    <div class="meta">${[r.emetteur&&("Émetteur : "+r.emetteur), r.canal&&("Canal : "+r.canal), r.lieu&&("Lieu : "+r.lieu), r.cloture&&("Clôturé : "+r.cloture)].filter(Boolean).map(esc).join(" · ")}</div>
+  </article>`;
+}
+function tuiles(st){
+  const der = st.dernier ? `${fmtDate(st.dernier.date)} ${fmtHeure(st.dernier.heure)}`.trim() : "—";
+  const T = (k,v,n,cls="") => `<div class="tile ${cls}"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div><div class="n">${esc(n||"")}</div></div>`;
+  return `<div class="tiles">
+    ${T("Entrées", st.n, st.premier?`depuis le ${fmtDate(st.premier)}`:"")}
+    ${T("À traiter", st.etat["À traiter"]||0, "dossiers à prendre", (st.etat["À traiter"]||0)>0?"alert":"")}
+    ${T("En cours", st.etat["En cours"]||0, "dossiers suivis")}
+    ${T("Traités", (st.etat["Traité"]||0)+(st.etat["Clos sans suite"]||0), "clos ou traités")}
+    ${T("Événements significatifs", st.evt, "★ à retenir pour le RETEX")}
+    ${T("Durée", st.jours?plur(st.jours,"jour"):"—", "premier au dernier jour saisi","sm")}
+    ${T("Dernière entrée", der, "","sm")}
+  </div>`;
+}
+function graphEtats(st){
+  const tot = st.n || 1;
+  const seg = ETATS_ORDRE.map(e => ({e, n:st.etat[e]||0}));
+  const autres = st.n - seg.reduce((a,x)=>a+x.n,0);
+  if (autres>0) seg.push({e:"Autre", n:autres});
+  const cls = e => "c-"+classeEtat(e);
+  return `<div class="card"><h2>Répartition par état</h2>
+    <div class="stack" role="img" aria-label="${esc(seg.map(x=>x.e+" : "+x.n).join(", "))}">${seg.filter(x=>x.n).map(x=>`<span class="${cls(x.e)}" style="width:${(x.n/tot*100).toFixed(2)}%" title="${esc(x.e)} : ${x.n}"></span>`).join("")}</div>
+    <div class="legend">${seg.map(x=>`<span><i class="dot ${cls(x.e)}"></i>${esc(x.e)} <b>${x.n}</b></span>`).join("")}</div>
+    <p style="margin:14px 0 0;font-size:13px;color:var(--ink2)"><b style="font-size:26px;color:var(--ink)">${st.n?Math.round((st.n-st.ouvert)/st.n*100):0} %</b> des entrées sont traitées ou closes <span style="color:var(--muted)">(${st.ouvert} dossier${st.ouvert>1?"s":""} encore ouvert${st.ouvert>1?"s":""})</span></p></div>`;
+}
+function graphCellules(st){
+  const noms = ordreCellules(st.cel); const max = Math.max(1,...noms.map(c=>st.cel[c].n));
+  const rows = noms.map(c => { const o = st.cel[c]; const w = v => (v/max*100).toFixed(2)+"%";
+    return `<div class="row"><div class="lab" title="${esc(c)}">${esc(c)}</div>
+      <div class="bar" role="img" aria-label="${esc(c)} : ${o.at} à traiter, ${o.en} en cours, ${o.fermes} traités"><span class="c-at" style="width:${w(o.at)}"></span><span class="c-en" style="width:${w(o.en)}"></span><span class="c-cl" style="width:${w(o.fermes)}"></span></div>
+      <div class="num">${o.n}</div></div>`; }).join("");
+  return `<div class="card"><h2>Par cellule <small>— à traiter / en cours / traités</small></h2><div class="rows">${rows||'<div class="empty">Aucune entrée</div>'}</div>
+    <div class="legend"><span><i class="dot c-at"></i>À traiter</span><span><i class="dot c-en"></i>En cours</span><span><i class="dot c-cl"></i>Traités / clos</span></div></div>`;
+}
+function graphChrono(rows, st){
+  if (!rows.length) return `<div class="card"><h2>Chronologie</h2><div class="empty">Aucune entrée</div></div>`;
+  let buckets = [], titre = "";
+  const dates = [...new Set(rows.map(r=>r.date).filter(Boolean))].sort();
+  if (dates.length <= 1){                                                   // un seul jour : par heure
+    titre = "Entrées par heure";
+    buckets = Array.from({length:24},(_,h)=>({lab:pad(h)+"h", n:0, evt:0}));
+    for (const r of rows){ if (r.min===null) continue; const b = buckets[Math.floor(r.min/60)]; b.n++; if (r.evt) b.evt++; }
+  } else {
+    titre = "Entrées par jour";
+    const d0 = new Date(dates[0]+"T12:00:00"), d1 = new Date(dates[dates.length-1]+"T12:00:00");
+    const nb = Math.min(120, Math.round((d1-d0)/86400000)+1);
+    for (let i=0;i<nb;i++){ const d = new Date(d0.getTime()+i*86400000); buckets.push({iso:d.toISOString().slice(0,10), lab:pad(d.getDate())+"/"+pad(d.getMonth()+1), n:0, evt:0}); }
+    const idx = Object.fromEntries(buckets.map((b,i)=>[b.iso,i]));
+    for (const r of rows){ const i = idx[r.date]; if (i===undefined) continue; buckets[i].n++; if (r.evt) buckets[i].evt++; }
+  }
+  const W=640,H=170,L=30,B=24,T=10, n=buckets.length, bw=(W-L)/n, max=Math.max(1,...buckets.map(b=>b.n));
+  const y = v => T + (H-T-B)*(1-v/max);
+  const pas = Math.ceil(n/14);
+  const bars = buckets.map((b,i)=>{ const x = L+i*bw+bw*0.15, w = bw*0.7;
+    return `<g><title>${esc(b.lab)} : ${b.n} entrée(s), dont ${b.evt} significative(s)</title>
+      <rect class="bar1" x="${x.toFixed(1)}" y="${y(b.n).toFixed(1)}" width="${w.toFixed(1)}" height="${(H-B-y(b.n)).toFixed(1)}" rx="2"/>
+      ${b.evt?`<rect class="bar2" x="${x.toFixed(1)}" y="${y(b.evt).toFixed(1)}" width="${w.toFixed(1)}" height="${(H-B-y(b.evt)).toFixed(1)}" rx="2"/>`:""}
+      ${i%pas===0?`<text x="${(x+w/2).toFixed(1)}" y="${H-8}" text-anchor="middle">${esc(b.lab)}</text>`:""}</g>`; }).join("");
+  const grad = [0, Math.round(max/2), max].filter((v,i,a)=>a.indexOf(v)===i).map(v=>`<line class="axis" x1="${L}" x2="${W}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}"/><text x="${L-6}" y="${(y(v)+4).toFixed(1)}" text-anchor="end">${v}</text>`).join("");
+  return `<div class="card"><h2>${titre} <small>— dont événements significatifs</small></h2>
+    <svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(titre)}">${grad}${bars}</svg>
+    <div class="legend"><span><i class="dot c-s1"></i>Entrées</span><span><i class="dot" style="background:var(--s2)"></i>Événements significatifs</span></div></div>`;
+}
+function graphCanaux(st){
+  const ent = Object.entries(st.canal).sort((a,b)=>b[1]-a[1]); const max = Math.max(1,...ent.map(e=>e[1]));
+  return `<div class="card"><h2>Canaux d'entrée</h2><div class="rows">${ent.map(([k,v])=>`<div class="row"><div class="lab" title="${esc(k)}">${esc(k)}</div><div class="bar"><span class="c-s1" style="width:${(v/max*100).toFixed(2)}%"></span></div><div class="num">${v}</div></div>`).join("")||'<div class="empty">Aucune entrée</div>'}</div></div>`;
+}
+function vueSynthese(rows){
+  const st = stats(rows);
+  $("#tab-synthese").innerHTML = tuiles(st) +
+    `<div class="grid2">${graphEtats(st)}${graphCellules(st)}</div><div class="grid2">${graphChrono(rows,st)}${graphCanaux(st)}</div>`;
+}
+function vueATraiter(rows){
+  const ouv = rows.filter(estOuvert); const st = stats(ouv);
+  if (!ouv.length){ $("#tab-atraiter").innerHTML = `<div class="empty">Aucun dossier ouvert.</div>`; return; }
+  const parCel = {}; for (const r of ouv) (parCel[r.cellule||"(non précisée)"] ||= []).push(r);
+  $("#tab-atraiter").innerHTML = `<p style="color:var(--ink2);margin-top:0">${plur(ouv.length,"dossier ouvert","dossiers ouverts")} — les plus anciens en tête de chaque cellule.</p>` +
+    ordreCellules(st.cel).map(c => `<div class="group"><h3>${esc(c)} <span class="cnt">${parCel[c].length}</span></h3>${parCel[c].map(r=>entree(r)).join("")}</div>`).join("");
+}
+function vueJournal(rows){
+  const F = S.f;
+  const cel = [...new Set(rows.map(r=>r.cellule).filter(Boolean))];
+  const etats = [...new Set(rows.map(r=>r.etat))];
+  const opt = (arr,val,tous) => `<option value="">${tous}</option>` + arr.map(x=>`<option ${x===val?"selected":""}>${esc(x)}</option>`).join("");
+  let lst = rows.filter(r => (!F.cellule||r.cellule===F.cellule) && (!F.etat||r.etat===F.etat) && (!F.evt||r.evt) &&
+    (!F.q || (r.info+" "+r.action+" "+r.emetteur+" "+r.lieu).toLowerCase().includes(F.q.toLowerCase())));
+  if (F.ordre==="desc") lst = lst.slice().reverse();
+  const vis = lst.slice(0,F.limite);
+  const el = $("#tab-journal");
+  el.innerHTML = `<div class="toolbar">
+      <input type="search" id="j-q" placeholder="Rechercher…" value="${esc(F.q)}" aria-label="Rechercher">
+      <select id="j-cel" aria-label="Cellule">${opt(cel,F.cellule,"Toutes les cellules")}</select>
+      <select id="j-etat" aria-label="État">${opt(etats,F.etat,"Tous les états")}</select>
+      <label><input type="checkbox" id="j-evt" ${F.evt?"checked":""}> ★ significatifs</label>
+      <select id="j-ordre" aria-label="Ordre"><option value="desc" ${F.ordre==="desc"?"selected":""}>Plus récent d'abord</option><option value="asc" ${F.ordre==="asc"?"selected":""}>Chronologique</option></select>
+      <span style="color:var(--muted)">${plur(lst.length,"entrée")}</span></div>` +
+    (vis.map(r=>entree(r)).join("") || `<div class="empty">Aucune entrée ne correspond.</div>`) +
+    (lst.length>vis.length?`<button type="button" id="j-plus">Afficher plus (${lst.length-vis.length} restantes)</button>`:"");
+  const rerender = () => { vueJournal(lignes()); };
+  const q = $("#j-q"); q.oninput = () => { F.q = q.value; F.limite = LIGNES_JOURNAL; const pos=q.selectionStart; rerender(); const n=$("#j-q"); n.focus(); n.setSelectionRange(pos,pos); };
+  $("#j-cel").onchange = e => { F.cellule = e.target.value; F.limite = LIGNES_JOURNAL; rerender(); };
+  $("#j-etat").onchange = e => { F.etat = e.target.value; F.limite = LIGNES_JOURNAL; rerender(); };
+  $("#j-evt").onchange = e => { F.evt = e.target.checked; F.limite = LIGNES_JOURNAL; rerender(); };
+  $("#j-ordre").onchange = e => { F.ordre = e.target.value; rerender(); };
+  const p = $("#j-plus"); if (p) p.onclick = () => { F.limite += LIGNES_JOURNAL; rerender(); };
+}
+function parseSafer(txt){
+  const re = /(?:^|[|—–-]\s*)([SAFER])\s*:\s*([^|]*)/g; const out = []; let m, premier = -1;
+  while ((m = re.exec(txt))){ if (premier<0) premier = m.index; out.push({l:m[1], t:m[2].trim()}); }
+  const titre = premier>0 ? txt.slice(0,premier).replace(/[—–\-\s|]+$/,"").trim() : (out.length?"":txt);
+  return { titre, parts: SAFER_LETTRES.map(l => out.find(o=>o.l===l)).filter(Boolean) };
+}
+function blocSafer(r){
+  const p = parseSafer(r.info);
+  const tete = `${fmtDate(r.date)} ${fmtHeure(r.heure)}`.trim();
+  if (!p.parts.length) return `<div class="card"><h2>${esc(tete)} — Point de situation</h2><p style="white-space:pre-wrap;margin:0">${esc(r.info)}</p></div>`;
+  return `<div class="card"><h2>${esc(p.titre||"Point de situation")} <small>— ${esc(tete)}</small></h2>
+    <div class="safer">${p.parts.map(x=>`<div><span class="l" title="${esc(SAFER_LIBELLES[x.l]||"")}">${x.l}</span>${SAFER_LIBELLES[x.l]?` <b>${esc(SAFER_LIBELLES[x.l])}</b>`:""}<p>${esc(x.t)}</p></div>`).join("")}</div></div>`;
+}
+function vueSafer(rows){
+  const pts = rows.filter(r=>r.safer).slice().reverse();
+  $("#tab-safer").innerHTML = pts.length ? pts.map(blocSafer).join("") : `<div class="empty">Aucun point de situation saisi pour cet épisode.<br>Convention : une entrée « POINT DE SITUATION n°X — S: … | A: … | F: … | E: … | R: … ».</div>`;
+}
+function vueAffichage(rows){
+  const st = stats(rows);
+  const ouv = rows.filter(estOuvert);
+  const dern = rows.slice(-6).reverse();
+  const dsafer = rows.filter(r=>r.safer).slice(-1)[0];
+  const mini = r => `<div class="mini"><span class="t">${esc(fmtDate(r.date))} ${esc(fmtHeure(r.heure)||"—")}</span><span class="x">${esc((r.info||"").slice(0,170))}${(r.info||"").length>170?"…":""}</span><span class="y">${esc(r.cellule)} · ${esc(r.etat)}${r.evt?" · ★":""}</span></div>`;
+  const parCel = {}; for (const r of ouv) (parCel[r.cellule||"(non précisée)"] ||= []).push(r);
+  $("#tab-affichage").innerHTML = tuiles(st) + `<div class="wall">
+    <div class="card"><h2>Dossiers ouverts par cellule <small>— ${ouv.length}</small></h2>
+      ${ouv.length ? ordreCellules(stats(ouv).cel).map(c=>`<div class="mini"><span class="t">${parCel[c].length}</span><span class="x"><b>${esc(c)}</b></span><span class="y">${esc((parCel[c][0].info||"").slice(0,110))}${(parCel[c][0].info||"").length>110?"…":""}</span></div>`).join("") : '<div class="empty">Aucun dossier ouvert</div>'}</div>
+    <div><div class="card" style="margin-bottom:14px"><h2>Dernières entrées</h2>${dern.map(mini).join("")||'<div class="empty">Aucune entrée</div>'}</div>
+      ${dsafer?blocSafer(dsafer):""}</div></div>`;
+}
+
+function render(){
+  const rows = lignes();
+  const sel = $("#sel-episode"), eps = episodes();
+  sel.hidden = eps.length === 0;
+  sel.innerHTML = (eps.length?`<option value="*" ${S.episode==="*"?"selected":""}>Tous les épisodes</option>`:"") + eps.map(e=>`<option ${e===S.episode?"selected":""}>${esc(e)}</option>`).join("");
+  const p = S.params;
+  const org = Q.get("org") || p.organisation || "";
+  $("#org").textContent = org; $("#org").hidden = !org;
+  $("#titre").textContent = Q.get("titre") || "Main courante de crise";
+  const spec = S.episode && S.episode!=="*";
+  const ev = spec ? S.episode : (p.evenement || (eps.length ? "Tous les épisodes" : ""));
+  const actif = p.activation && (!eps.length || S.episode===eps[0]);          // l'activation décrite dans Parametres = épisode le plus récent
+  const maj = S.maj ? `mis à jour à ${pad(S.maj.getHours())}:${pad(S.maj.getMinutes())}` : "";
+  $("#sous-titre").textContent = [ev, actif?`activation ${p.activation}`:"", maj].filter(Boolean).join(" · ");
+  document.body.classList.toggle("affichage", S.affichage);
+  $("#btn-affichage").textContent = S.affichage ? "Quitter l'affichage" : "Mode affichage";
+  vueSynthese(rows); vueATraiter(rows); vueJournal(rows); vueSafer(rows); vueAffichage(rows);
+  for (const b of document.querySelectorAll("#tabs button")) b.setAttribute("aria-selected", String(b.dataset.tab===S.onglet));
+  for (const id of ["synthese","atraiter","journal","safer"]) $("#tab-"+id).hidden = S.affichage || id!==S.onglet;
+  $("#tab-affichage").hidden = !S.affichage;
+}
+function statut(msg, cls){ const b=$("#banner"); b.hidden=!msg; b.className="banner "+(cls||""); b.textContent=msg||""; }
+
+document.addEventListener("click", e => {
+  const t = e.target.closest("button"); if (!t) return;
+  if (t.dataset.tab){ S.onglet = t.dataset.tab; render(); }
+  else if (t.id==="btn-affichage"){ S.affichage = !S.affichage; render(); }
+  else if (t.dataset.more){ const p = t.previousElementSibling; p.textContent = p.dataset.full; t.remove(); }
+});
+$("#sel-episode").addEventListener("change", e => { S.episode = e.target.value; S.f.limite = LIGNES_JOURNAL; S.f.cellule=""; S.f.etat=""; render(); });
+
+/* ============ Démarrage : Grist ou démonstration ============ */
+function origineGrist(){ try{ if (document.referrer) return new URL(document.referrer).origin; }catch(e){} return GRIST_URL_MANUEL; }
+function chargerScript(src){ return new Promise((ok,ko)=>{ const s=document.createElement("script"); s.src=src; s.onload=ok; s.onerror=()=>ko(new Error("script introuvable : "+src)); document.head.appendChild(s); }); }
+const facultative = nom => grist.docApi.fetchTable(nom).catch(()=>null);
+function choisirEpisode(){
+  const eps = episodes();
+  if (S.episode && (S.episode==="*" || eps.includes(S.episode))) return;
+  S.episode = eps.length ? eps[0] : "*";                               // par défaut : l'épisode le plus récent
+}
+async function rafraichir(){
+  const tMain = Q.get("table") || TABLES.main, tPar = Q.get("params") || TABLES.params;
+  const [t,p] = await Promise.all([ grist.docApi.fetchTable(tMain), facultative(tPar) ]);   // la table des paramètres est facultative
+  S.rows = normaliser(t); S.params = lireParams(p); S.maj = new Date(); choisirEpisode(); render();
+}
+async function bootGrist(){
+  if (window.self === window.top) return false;                         // pas dans une iframe : mode démonstration
+  const origine = origineGrist();
+  if (!origine) throw new Error("origine Grist inconnue (renseigner GRIST_URL_MANUEL)");
+  document.body.classList.add("in-grist");
+  await chargerScript(origine + "/grist-plugin-api.js");
+  if (!window.grist) throw new Error("l'API Grist ne s'est pas chargée");
+  grist.ready({ requiredAccess:"full" });                               // lecture seule dans le code : seul fetchTable est appelé
+  await rafraichir();
+  grist.onRecords(() => rafraichir());
+  S.mode = "grist"; return true;
+}
+
+/* ---- Données de démonstration : intégralement fictives ---- */
+function demo(){
+  let seed = 7; const rnd = () => (seed = (seed*1664525+1013904223)%4294967296)/4294967296;
+  const pickr = a => a[Math.floor(rnd()*a.length)];
+  const cols = {id:[],Date:[],Heure:[],Emetteur:[],Coordonnees:[],Canal:[],Lieu:[],Cellule:[],Information:[],Action:[],Etat:[],Evt_significatif:[],Cloture:[],Saisi_par:[],Episode:[]};
+  const base = Date.UTC(2026,0,12)/1000;
+  const emet = ["Service Voirie (fictif)","Préfecture exemple","Mme Martin (fictive)","Centre de secours exemple","Direction des écoles (fictive)","Agent d'astreinte A","Mairie voisine exemple"];
+  const modele = {
+    "Décision-Pilotage":["Le DOS valide l'ouverture du poste de commandement.","Point d'étape avec la préfecture : vigilance maintenue.","Arrêté de fermeture des berges signé."],
+    "Anticipation":["Prévision de montée des eaux dans les 12 h : scénario défavorable préparé.","Anticipation d'un afflux de demandes d'hébergement.","Analyse des routes à risque pour demain matin."],
+    "Renseignement":["Appels entrants : 14 demandes sur la rue des Tilleuls (fictive).","Remontée terrain : chaussée inondée avenue de l'Exemple.","Information confirmée par le centre de secours."],
+    "Communication":["Message d'information diffusé sur le site et les réseaux.","Communiqué de presse n°1 transmis.","Éléments de langage mis à jour pour l'accueil."],
+    "Intervention — Population":["Ouverture du gymnase pour l'hébergement temporaire.","Contact téléphonique avec les personnes isolées du registre.","Distribution d'eau et de couvertures."],
+    "Intervention — Logistique":["Mise en place de barrières route de l'Exemple.","Livraison de 50 lits de camp.","Pompage du sous-sol de l'école fictive."],
+    "Intervention — Sécurité":["Patrouille de la police municipale sur le secteur sinistré.","Déviation mise en place carrefour fictif.","Évacuation d'un immeuble par précaution."]
+  };
+  const cels = Object.keys(modele), canaux = ["Téléphone","Mail","Présentiel","Radio / TETRA","Autre"];
+  const ep = [["Exercice crue — démonstration",0,3,26],["Exercice canicule — démonstration",20,2,12]];
+  let id = 1;
+  for (const [nom,off,jours,n] of ep){
+    const items = [];
+    for (let i=0;i<n;i++){ const j = Math.floor(i/n*jours), h = 7+Math.floor(rnd()*14), m = Math.floor(rnd()*60), c = pickr(cels); items.push({j,h,m,c}); }
+    items.sort((a,b)=>a.j-b.j||a.h-b.h||a.m-b.m);
+    items.forEach((x,i)=>{
+      const age = n-i; const etat = age>14?"Traité":age>7?pickr(["Traité","En cours"]):pickr(["En cours","À traiter","À traiter"]);
+      const safer = (i%9===8);
+      cols.id.push(id++); cols.Date.push(base+(off+x.j)*86400); cols.Heure.push(i%11===5?"à compléter":pad(x.h)+":"+pad(x.m));
+      cols.Emetteur.push(pickr(emet)); cols.Coordonnees.push("(non affiché)"); cols.Canal.push(pickr(canaux)); cols.Lieu.push(rnd()>.5?"Quartier de l'Exemple":"");
+      cols.Cellule.push(safer?"Décision-Pilotage":x.c);
+      cols.Information.push(safer ? `POINT DE SITUATION n°${Math.ceil((i+1)/9)} — S: ${pickr(["Niveau d'eau en baisse sur le secteur nord","Stabilisation de la situation à l'ouest"])} | A: ${pickr(["Risque de remontée en soirée","Pas d'aggravation attendue"])} | F: ${pickr(["12 agents mobilisés, 2 pompes","8 agents, 1 camion"])} | E: ${pickr(["Écoles du secteur","Commerces de la rue fictive"])} | R: ${pickr(["Maintenir le dispositif 6 h","Alléger la cellule Logistique"])}` : pickr(modele[x.c]));
+      cols.Action.push(rnd()>.45?pickr(["Équipe voirie envoyée","Information transmise à la cellule Communication","Appel de la préfecture programmé","Registre des personnes vulnérables consulté"]):"");
+      cols.Etat.push(safer?"Traité":etat); cols.Evt_significatif.push(safer||rnd()>.82); cols.Cloture.push(etat==="Traité"?pad(Math.min(23,x.h+2))+":00":""); cols.Saisi_par.push("AB"); cols.Episode.push(nom);
+    });
+  }
+  const params = {id:[1],Evenement:["Exercice fictif"],Activation:["12/01/2026 08:00"],Organisation:["Commune d'Exemple-sur-Rivière (données fictives)"]};
+  return { cols, params };
+}
+async function demarrer(){
+  try{
+    if (await bootGrist()) return;
+  }catch(e){ console.error(e); statut("Impossible de lire le document Grist : "+e.message, "err"); return; }
+  const d = demo(); S.rows = normaliser(d.cols); S.params = lireParams(d.params); S.maj = new Date(); S.mode = "demo";
+  choisirEpisode(); render();
+  statut("Mode démonstration : données entièrement fictives. Dans Grist, le widget affiche le contenu réel du document.", "demo");
+}
+demarrer();
+</script>
+</body>
+</html>
