@@ -11,6 +11,7 @@ comme **vues personnalisées** (« custom widgets »).
 | `dysfonctionnements-synthese` | Tableau de bord, liste de travail et synthèse de comité pour le suivi des dysfonctionnements de la restauration scolaire | `https://ville-du-bouscat.github.io/grist-widgets/dysfonctionnements-synthese/` |
 | `suivi-eau-synthese` | Synthèse du suivi de l'eau potable : fuites en attente de vérification, récurrences, consommations relevées du parc communal | `https://ville-du-bouscat.github.io/grist-widgets/suivi-eau-synthese/` |
 | `suivi-contrat-synthese` | Synthèse du contrat de restauration (DSP API) : signalements des écoles et du portage, échéances contractuelles, effectifs et facturation | `https://ville-du-bouscat.github.io/grist-widgets/suivi-contrat-synthese/` |
+| `main-courante-synthese` | Synthèse de la main courante de crise pour les élus et les pilotes de cellules : dossiers à traiter, répartition par cellule, chronologie, points de situation, mode écran mural | `https://ville-du-bouscat.github.io/grist-widgets/main-courante-synthese/` |
 
 Ouverts hors de Grist, ces widgets affichent un jeu de démonstration **fictif** — voir l'avertissement ci-dessous.
 
@@ -70,6 +71,18 @@ Vue de lecture du suivi du contrat de restauration municipale (DSP API Restaurat
 - **Effectifs et facturation** — repas réels et facturés par mois et par site, alimentés par les exports du délégataire.
 
 Comme les autres widgets, il lit les données avec les droits de la personne qui le consulte : l'équipe du portage n'y voit que le portage, un responsable d'office que son office. Il n'écrit rien. Un bouton imprime les cinq onglets à la suite.
+
+### `main-courante-synthese`
+
+Vue de lecture de la main courante de crise (document « Main courante de crise »), destinée aux élus et aux pilotes de cellules. Une table, `Main_courante`, et une table de paramètres facultative, `Parametres` :
+
+- **Synthèse** — tuiles (entrées, à traiter, en cours, traités, événements significatifs, durée), répartition par état et par cellule, chronologie, canaux d'entrée.
+- **À traiter** — dossiers ouverts regroupés par cellule, les plus anciens en tête.
+- **Journal** — toutes les entrées, filtrables par cellule, état, événement significatif et texte.
+- **Points de situation** — entrées « POINT DE SITUATION » découpées selon la grille SAFER.
+- **Mode affichage** — vue grand écran pour la salle de crise.
+
+La colonne `Coordonnees` n'est jamais lue. Un sélecteur d'épisode filtre l'affichage (épisode le plus récent par défaut). Le widget est conçu pour être réutilisé par d'autres organisations : voir le README du dossier.
 
 ## ⚠ Ce dépôt est public — règle absolue
 
@@ -165,6 +178,9 @@ possible. **Il n'écrit rien.**
 │   └── index.html
 ├── suivi-contrat-synthese/
 │   └── index.html
+├── main-courante-synthese/
+│   ├── index.html
+│   └── README.md
 └── .github/workflows/pages.yml         publication automatique
 ```
 
