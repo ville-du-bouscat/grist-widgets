@@ -92,7 +92,7 @@ footer{color:var(--muted);font-size:11.5px;margin-top:26px;border-top:1px solid 
 <header>
   <h1>Synthèse des subventions d'investissement</h1>
   <p>Vue de lecture du document Grist « Subventions Le Bouscat » : ce qui attend quelqu'un,
-     le reste à percevoir, les versements à pointer et la note mensuelle de situation.</p>
+     le reste à percevoir, les versements à pointer, le contrôle avec Grand Angle et la note mensuelle de situation.</p>
 </header>
 
 <div class="banner">
@@ -106,6 +106,7 @@ footer{color:var(--muted);font-size:11.5px;margin-top:26px;border-top:1px solid 
   <button role="tab" aria-selected="true" data-tab="bord">Tableau de bord</button>
   <button role="tab" aria-selected="false" data-tab="dossiers">Dossiers</button>
   <button role="tab" aria-selected="false" data-tab="versements">Versements à pointer</button>
+  <button role="tab" aria-selected="false" data-tab="gda">Contrôle Grand Angle</button>
   <button role="tab" aria-selected="false" data-tab="note">Note mensuelle</button>
 </nav>
 
@@ -171,6 +172,24 @@ footer{color:var(--muted);font-size:11.5px;margin-top:26px;border-top:1px solid 
   </div>
 </section>
 
+<section id="tab-gda" hidden>
+  <div class="tiles" id="gda-tiles"></div>
+  <div class="card">
+    <h2>Titré dans Grand Angle et versé noté dans la base</h2>
+    <p class="hint">Comparaison par imputation de recette (opération et fonction Grand Angle) et par famille de financeur,
+      cumulée depuis 2023. « Titré » veut dire titre de recette émis, pas encaissé : l'encaissement se vérifie
+      avec le comptable public. Les écarts sont à expliquer, ils ne sont pas forcément des erreurs.</p>
+    <div class="ovx" id="gda-table"></div>
+    <p class="footnote" id="gda-source"></p>
+  </div>
+  <div class="card">
+    <h2>Versements notés hors rapprochement</h2>
+    <p class="hint">Versements enregistrés sur une opération qui n'a pas encore de clé Grand Angle
+      (colonnes Opération GDA et Fonction GDA de la table Operations).</p>
+    <div class="ovx" id="gda-horscle"></div>
+  </div>
+</section>
+
 <section id="tab-note" hidden>
   <div class="card">
     <h2>Note de situation</h2>
@@ -183,7 +202,7 @@ footer{color:var(--muted);font-size:11.5px;margin-top:26px;border-top:1px solid 
 
 <footer>
   <b>Widget Grist, en lecture seule.</b> À ajouter comme vue personnalisée dans le document
-  « Subventions Le Bouscat », avec le niveau d'accès « Accès complet au document » : il lit sept tables.
+  « Subventions Le Bouscat », avec le niveau d'accès « Accès complet au document » : il lit huit tables.
   Ouvert hors de Grist, il n'affiche qu'un jeu de démonstration inventé. — Ville du Bouscat.
 </footer>
 </div>
@@ -205,7 +224,7 @@ footer{color:var(--muted);font-size:11.5px;margin-top:26px;border-top:1px solid 
 
 const TABLES = { dossiers:"Dossiers", versements:"Versements", operations:"Operations",
                  dispositifs:"Dispositifs", financeurs:"Financeurs",
-                 acces:"Acces_plateformes", actions:"Actions" };
+                 acces:"Acces_plateformes", actions:"Actions", gecco:"Gecco_recettes" };
 const GRIST_URL_MANUEL = "";      // ex. "https://grist.numerique.gouv.fr" si le référent est masqué
 
 // Seuils métier — identiques aux formules de la base (colonne Alerte)
@@ -214,6 +233,19 @@ const SEUIL_RELANCE_JOURS = 60;   // au-delà, une demande de versement sans pai
 const STATUTS = ["Opportunité","En montage","Déposé","Accordé","Acompte perçu","Solde demandé",
                  "Soldé","Refusé","Caduc","Abandonné"];
 const CLOS = new Set(["Soldé","Refusé","Caduc","Abandonné"]);
+
+// Contrôle Grand Angle : l'export Gecco05 couvre les comptes administratifs depuis 2023.
+const GDA_DEBUT = 2023;
+const GDA_TOLERANCE = 1;          // en euros : en deçà, deux montants sont jugés concordants
+// Famille du financeur dans la base -> famille déduite de l'article comptable (table Gecco_recettes)
+function familleGda(f){
+  const s=String(f||"").toLowerCase();
+  if(s.startsWith("état")||s.includes("établissement public de l")) return "État et établissements nationaux";
+  if(s.startsWith("région")) return "Région";
+  if(s.startsWith("département")) return "Département";
+  if(s.includes("métropole")||s.startsWith("intercommunalité")) return "Bordeaux Métropole";
+  return "Autres financeurs";
+}
 
 /* ---------- utilitaires ---------- */
 const eur  = n => n==null||isNaN(n) ? "—" : new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(n);
@@ -269,13 +301,25 @@ const DEMO_DOSS = [
   [6,2,"Refusé",null,[],null,""],
   [3,3,"Solde demandé",50000,[[15000,-260,1]],140,""],
 ];
+// Clé Grand Angle fictive de chaque opération de démonstration (null : opération pas encore rattachée)
+const DEMO_CLES = ["LBDEMO01|212","LBDEMO02|313","LBDEMO03|511","LBDEMO04|321","LBDEMO05|4221","LBDEMO06|020",null];
+const DEMO_FAM  = ["État","Établissement public de l'État","Intercommunalité fictive","Organisme social","Fondation / mécénat"];
+// [exercice, clé, libellé opération, libellé fonction, famille, titré, attendu]
+const DEMO_GECCO = [
+  [2025,"LBDEMO01|212","Bâtiments fictifs","Écoles primaires","État et établissements nationaux",126000,0],
+  [2026,"LBDEMO01|212","Bâtiments fictifs","Écoles primaires","État et établissements nationaux",150000,144000],
+  [2025,"LBDEMO02|313","Culture fictive","Bibliothèques","Autres financeurs",40000,0],
+  [2026,"LBDEMO03|511","Espaces verts fictifs","Espaces verts urbains","Bordeaux Métropole",0,24000],
+  [2025,"LBDEMO04|321","Sports fictifs","Salles de sport","Autres financeurs",30000,0],
+  [2024,"LBDEMO09|025","Services fictifs","Cimetières","Bordeaux Métropole",12000,0],
+];
 const DEMO_ACCES = [["Plateforme fictive A",["Agent A"],"À faire"],["Plateforme fictive B",["Agent A","Agent B"],"Faite"],
   ["Plateforme fictive C",[],"À faire"]];
 
 /* ---------- données normalisées ---------- */
-let DOSS=[], VERS=[], ACCES=[];
+let DOSS=[], VERS=[], ACCES=[], GECCO=null, OPS_CLE=new Map();   // GECCO null : table absente
 
-function rendTout(){ rendBord(); rendFiltres(); rendListe(); rendVersements(); rendNote(); }
+function rendTout(){ rendBord(); rendFiltres(); rendListe(); rendVersements(); rendGda(); rendNote(); }
 
 function alerteDe(j){
   if(j==null) return "—";
@@ -405,6 +449,77 @@ function rendVersements(){
     + "</tbody></table>" : `<p class="empty">Aucune demande de versement en attente.</p>`;
 }
 
+/* ---------- contrôle Grand Angle ---------- */
+// Agrège par clé (opération|fonction GDA) et famille de financeur.
+function controleGda(){
+  if(!GECCO) return null;
+  const L=new Map(), get=(cle,fam)=>{ const k=cle+"#"+fam;
+    if(!L.has(k)) L.set(k,{cle,famille:fam,libelle:"",titre:0,attendu:0,gAn:{},verse:0,sansDate:0,bAn:{}}); return L.get(k); };
+  GECCO.forEach(g=>{ const l=get(g.cle,g.famille); l.titre+=g.titre; l.attendu+=g.attendu;
+    if(g.titre) l.gAn[g.exercice]=(l.gAn[g.exercice]||0)+g.titre;
+    if(!l.libelle) l.libelle=g.libOp+" · "+g.libFonction; });
+  const hors=[]; let avant=0;
+  DOSS.forEach(d=>{
+    const vs=VERS.filter(v=>v.dossier===d.id && v.verse);
+    if(!vs.length) return;
+    if(!d.cle){ hors.push({d,verse:vs.reduce((s,v)=>s+v.verse,0)}); return; }
+    const l=get(d.cle,familleGda(d.famille));
+    vs.forEach(v=>{ const y=v.dateVersement?v.dateVersement.getFullYear():null;
+      if(y!=null && y<GDA_DEBUT){ avant+=v.verse; return; }
+      l.verse+=v.verse; if(y==null) l.sansDate+=v.verse; else l.bAn[y]=(l.bAn[y]||0)+v.verse; });
+  });
+  const lignes=[...L.values()].map(l=>{
+    l.ops=OPS_CLE.get(l.cle)||[]; l.ecart=l.titre-l.verse;
+    if(!l.libelle) l.libelle=l.cle.replace("|"," · fonction ");
+    l.statut = !l.ops.length ? "Absent de la base"
+      : Math.abs(l.ecart)<=GDA_TOLERANCE ? "Concordant"
+      : !l.titre ? "Versé noté, rien de titré"
+      : l.ecart>0 ? "Titré supérieur au versé noté" : "Versé noté supérieur au titré";
+    return l; });
+  const ordre={"Versé noté, rien de titré":0,"Versé noté supérieur au titré":1,"Titré supérieur au versé noté":2,"Absent de la base":3,"Concordant":4};
+  lignes.sort((a,b)=>ordre[a.statut]-ordre[b.statut]||Math.abs(b.ecart)-Math.abs(a.ecart));
+  return {lignes,hors,avant};
+}
+function badgeGda(s){
+  const c={"Concordant":"b-ok","Absent de la base":"b-j30","Titré supérieur au versé noté":"b-j7"}[s]||"b-crit";
+  return `<span class="badge ${c}">${esc(s)}</span>`;
+}
+const parAn = (o,extra) => Object.keys(o).sort().map(y=>y+" : "+eurK(o[y])).concat(extra||[]).join(" · ");
+function rendGda(){
+  const C=controleGda(), T=document.getElementById("gda-table");
+  if(!C){
+    document.getElementById("gda-tiles").innerHTML="";
+    T.innerHTML=`<p class="empty">La table « ${TABLES.gecco} » n'existe pas dans ce document : importer d'abord les lignes du chapitre 13 de l'export Gecco05.</p>`;
+    document.getElementById("gda-horscle").innerHTML=""; document.getElementById("gda-source").textContent=""; return;
+  }
+  const {lignes,hors,avant}=C, comp=lignes.filter(l=>l.ops.length);
+  const titre=comp.reduce((s,l)=>s+l.titre,0), verse=comp.reduce((s,l)=>s+l.verse,0), sansDate=comp.reduce((s,l)=>s+l.sansDate,0);
+  const ok=comp.filter(l=>l.statut==="Concordant").length, absents=lignes.filter(l=>!l.ops.length);
+  document.getElementById("gda-tiles").innerHTML=[
+    tile("Titré dans Grand Angle", eurK(titre), "depuis "+GDA_DEBUT+", imputations rattachées à la base"),
+    tile("Versé noté dans la base", eurK(verse), "même périmètre, dont "+eurK(sansDate)+" sans date", sansDate>0),
+    tile("Lignes concordantes", ok+" / "+comp.length, pluriel(comp.length-ok,"écart")+" à expliquer", comp.length-ok>0),
+    tile("Absent de la base", absents.length, eurK(absents.reduce((s,l)=>s+l.titre,0))+" titrés sans opération suivie", absents.length>0),
+  ].join("");
+  T.innerHTML = lignes.length ? `<table><thead><tr><th>Constat</th><th>Imputation Grand Angle</th><th>Famille</th>
+    <th class="n">Titré GDA</th><th class="n">Versé noté</th><th class="n">Écart</th><th class="n">Attendu non titré</th></tr></thead><tbody>`
+    + lignes.map(l=>`<tr><td>${badgeGda(l.statut)}</td>
+      <td>${esc(l.libelle)}<span class="sub">${esc(l.cle)}${l.ops.length?" — "+esc(l.ops.join(" ; ")):""}</span></td>
+      <td>${esc(l.famille)}</td>
+      <td class="n">${l.titre?eur(l.titre):"—"}<span class="sub">${esc(parAn(l.gAn))}</span></td>
+      <td class="n">${l.verse?eur(l.verse):"—"}<span class="sub">${esc(parAn(l.bAn,l.sansDate?["sans date : "+eurK(l.sansDate)]:[]))}</span></td>
+      <td class="n">${l.ops.length&&Math.abs(l.ecart)>GDA_TOLERANCE?eur(l.ecart):"—"}</td>
+      <td class="n">${l.attendu?eur(l.attendu):"—"}</td></tr>`).join("")
+    + "</tbody></table>" : `<p class="empty">Aucune ligne à comparer.</p>`;
+  const src=[...new Set(GECCO.map(g=>g.source).filter(Boolean))].find(s=>/situation/.test(s));
+  document.getElementById("gda-source").textContent = "Source : export Gecco05, chapitre 13"+(src?" — "+src.replace(/^.*?(situation)/,"$1"):"")
+    +". Écart = titré moins versé noté."+(avant?" Versements notés avant "+GDA_DEBUT+" exclus de la comparaison : "+eur(avant)+".":"");
+  document.getElementById("gda-horscle").innerHTML = hors.length ? `<table><thead><tr><th>Dossier</th><th>Famille</th><th class="n">Versé noté</th></tr></thead><tbody>`
+    + hors.sort((a,b)=>b.verse-a.verse).map(h=>`<tr><td>${esc(h.d.operation)}<span class="sub">${esc(h.d.dispositif||h.d.financeur)}</span></td>
+      <td>${esc(familleGda(h.d.famille))}</td><td class="n">${eur(h.verse)}</td></tr>`).join("")
+    + "</tbody></table>" : `<p class="empty">Tous les versements notés portent sur une opération rattachée à Grand Angle.</p>`;
+}
+
 /* ---------- note mensuelle ---------- */
 function rendNote(){
   const auj=aujourdHui(), actifs=DOSS.filter(d=>d.actif);
@@ -435,6 +550,10 @@ function rendNote(){
   L.push("4. Encaissements");
   L.push("- "+pluriel(ap.length,"versement")+" à pointer avec les Finances, pour "+eur(ap.reduce((s,v)=>s+v.verse,0))+".");
   L.push("- "+pluriel(att.length,"demande")+" de versement en attente de paiement, pour "+eur(att.reduce((s,v)=>s+(v.demande||0),0))+".");
+  const C=controleGda();
+  if(C){ const comp=C.lignes.filter(l=>l.ops.length), ok=comp.filter(l=>l.statut==="Concordant").length, abs=C.lignes.filter(l=>!l.ops.length);
+    L.push("- Rapprochement avec Grand Angle : "+ok+" imputation"+(ok>1?"s":"")+" concordante"+(ok>1?"s":"")+" sur "+comp.length
+      +(abs.length?" ; "+pluriel(abs.length,"recette")+" titrée"+(abs.length>1?"s":"")+" sans opération suivie dans la base ("+eur(abs.reduce((s,l)=>s+l.titre,0))+")":"")+"."); }
   L.push("");
   L.push("5. Organisation");
   L.push("- "+pluriel(fr.length,"compte")+" de plateforme avec moins de deux accès"+(fr.length?" : "+fr.map(a=>a.plateforme).join(" ; "):"")+".");
@@ -475,7 +594,7 @@ async function bootGrist(){
   document.body.classList.add("in-grist");
   await chargerScript(origine+"/grist-plugin-api.js");
   if(!window.grist) throw new Error("l'API Grist ne s'est pas chargée");
-  grist.ready({ requiredAccess:"full" });             // sept tables lues : accès complet requis
+  grist.ready({ requiredAccess:"full" });             // huit tables lues : accès complet requis
   await rafraichir();
   grist.onRecords(()=>rafraichir());
   return true;
@@ -484,14 +603,20 @@ function facultative(nom){ return grist.docApi.fetchTable(nom).catch(()=>null); 
 const enLignes = t => !t ? [] : (t.id||[]).map((_,i)=>{ const o={}; for(const k in t) o[k]=t[k][i]; return o; });
 
 async function rafraichir(){
-  const [d,v,o,di,f,a] = await Promise.all([
+  const [d,v,o,di,f,a,g] = await Promise.all([
     grist.docApi.fetchTable(TABLES.dossiers),
     grist.docApi.fetchTable(TABLES.versements),
     grist.docApi.fetchTable(TABLES.operations),
     grist.docApi.fetchTable(TABLES.dispositifs),
     grist.docApi.fetchTable(TABLES.financeurs),
     facultative(TABLES.acces),
+    facultative(TABLES.gecco),
   ]);
+  OPS_CLE=new Map();
+  enLignes(o).forEach(r=>{ const c=pick(r,"Cle_GDA"); if(c) OPS_CLE.set(c,[...(OPS_CLE.get(c)||[]),pick(r,"Nom")]); });
+  GECCO = g ? enLignes(g).map(r=>({ exercice:nombre(pick(r,"Exercice")), cle:pick(r,"Cle")||(pick(r,"Operation")+"|"+pick(r,"Fonction")),
+    libOp:pick(r,"Libelle_operation"), libFonction:pick(r,"Libelle_fonction"), famille:pick(r,"Famille")||"Autres financeurs",
+    titre:nombre(pick(r,"Titre"))||0, attendu:nombre(pick(r,"Attendu"))||0, source:pick(r,"Source") })) : null;
   const ops=new Map(enLignes(o).map(r=>[r.id,r])), dis=new Map(enLignes(di).map(r=>[r.id,r])), fins=new Map(enLignes(f).map(r=>[r.id,r]));
   VERS = enLignes(v).map(r=>({ id:r.id, dossier:pick(r,"Dossier"), nature:pick(r,"Nature"),
     demande:nombre(pick(r,"Montant_demande")), dateDemande:versDate(pick(r,"Date_demande")), mode:pick(r,"Mode_envoi"),
@@ -500,6 +625,7 @@ async function rafraichir(){
   DOSS = enLignes(d).map(r=>{
     const op=ops.get(r.Operation)||{}, dp=dis.get(r.Dispositif)||{}, fn=fins.get(r.Financeur||dp.Financeur)||{};
     return completer({ id:r.id, operation:pick(op,"Nom")||"Opération non renseignée", dispositif:pick(dp,"Nom"), financeur:pick(fn,"Nom"),
+      famille:pick(fn,"Famille"), cle:pick(op,"Cle_GDA"),
       statut:pick(r,"Statut")||"—", accorde:nombre(pick(r,"Montant_accorde")),
       echeance:versDate(pick(r,"Prochaine_echeance")),
       echeanceAction:versDate(pick(r,"Echeance_action")), limCommencement:versDate(pick(r,"Limite_commencement")),
@@ -520,12 +646,16 @@ function chargerDemo(){
     const [op,fi,st,acc,vs,ech,act]=x; const id=i+1;
     vs.forEach(([m,j,enc])=>VERS.push({id:vid++,dossier:id,nature:"Acompte",demande:m,dateDemande:dans(j-30),mode:"Plateforme",
       verse:m,dateVersement:dans(j),encaissement:enc?dans(j+10):null,pointe:!!enc,notes:enc?"":"Encaissement à constater"}));
-    return { id, operation:DEMO_OPS[op], dispositif:"Dispositif fictif "+(fi+1), financeur:DEMO_FIN[fi], statut:st, accorde:acc,
+    return { id, operation:DEMO_OPS[op], dispositif:"Dispositif fictif "+(fi+1), financeur:DEMO_FIN[fi],
+      famille:DEMO_FAM[fi], cle:DEMO_CLES[op], statut:st, accorde:acc,
       echeance:null, echeanceAction:dans(ech), limCommencement:null, limAchevement:null, limSolde:null, prochaineAction:act };
   });
   VERS.push({id:vid++,dossier:3,nature:"Solde",demande:55000,dateDemande:dans(-95),mode:"LRAR",verse:null,dateVersement:null,encaissement:null,pointe:false,notes:""});
   VERS.push({id:vid++,dossier:11,nature:"Solde",demande:35000,dateDemande:dans(-20),mode:"Courriel",verse:null,dateVersement:null,encaissement:null,pointe:false,notes:""});
   DOSS.forEach(completer);
+  OPS_CLE=new Map(); DEMO_CLES.forEach((c,i)=>{ if(c) OPS_CLE.set(c,[DEMO_OPS[i]]); });
+  GECCO = DEMO_GECCO.map(([y,c,lo,lf,fa,t,a])=>({exercice:y,cle:c,libOp:lo,libFonction:lf,famille:fa,titre:t,attendu:a,
+    source:y===auj.getFullYear()?"Export fictif — situation au "+auj.toLocaleDateString("fr-FR"):"Export fictif"}));
   ACCES = DEMO_ACCES.map(([p,pe,m])=>({plateforme:p,personnes:pe,migration:m}));
 }
 bootGrist().then(connecte=>{

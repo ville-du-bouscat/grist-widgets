@@ -159,7 +159,7 @@ des chemins et des références réelles.
 ## Widget `subventions-synthese`
 
 Vue de lecture du document « Subventions Le Bouscat » (subventions d'investissement, reprise du
-suivi après le départ de la gestionnaire en septembre 2026). Six tables lues, dont une facultative :
+suivi après le départ de la gestionnaire en septembre 2026). Sept tables lues, dont deux facultatives :
 
 | Table | Une ligne = | Fait autorité sur |
 |---|---|---|
@@ -167,6 +167,7 @@ suivi après le départ de la gestionnaire en septembre 2026). Six tables lues, 
 | `Versements` | une avance, un acompte ou un solde | montant demandé, **montant réellement versé**, encaissement, pointage |
 | `Operations`, `Dispositifs`, `Financeurs` | référentiels | libellés |
 | `Acces_plateformes` (facultative) | un compte de plateforme | personnes ayant accès, rattachement à l'adresse fonctionnelle |
+| `Gecco_recettes` (facultative) | une imputation de recette du chapitre 13 × un exercice, issue de l'export Gecco05 | montants titrés et attendus dans Grand Angle |
 
 Points de conception à ne pas casser :
 
@@ -179,6 +180,15 @@ Points de conception à ne pas casser :
 - L'échéance est lue dans `Prochaine_echeance` ; si la colonne manque, `prochaineEcheance()` la recalcule
   avec la même règle que la formule de la base.
 - Aucun graphique n'utilise de bibliothèque : barres en CSS. Pas de CDN.
+- **Onglet « Contrôle Grand Angle » (ajouté le 10/10/2026).** Rapproche, par clé `opération|fonction`
+  Grand Angle et par famille de financeur, le titré de `Gecco_recettes` et le versé noté dans
+  `Versements`, cumulés depuis `GDA_DEBUT` (2023, premier compte administratif de l'export). La clé
+  de chaque opération vient de la formule `Cle_GDA` de la table `Operations` : c'est l'imputation de
+  la **recette**, pas celle de la dépense (le SDIE dépense sur LB106O006 mais encaisse sur LB106O003).
+  La famille de financeur côté base est ramenée à celle de l'article comptable par `familleGda()` ;
+  toute nouvelle famille dans `Financeurs` doit y être prise en compte. « Titré » n'est pas
+  « encaissé » : la page le dit, ne pas retirer cette mention. Si `Gecco_recettes` manque, l'onglet
+  l'explique au lieu de planter.
 
 Le jeu de démonstration embarqué utilise des opérations inventées (Groupe scolaire des Acacias,
 Médiathèque du Moulin…) et des financeurs « fictifs ». Ne jamais y substituer les dossiers de la commune.
