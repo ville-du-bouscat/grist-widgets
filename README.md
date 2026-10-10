@@ -12,6 +12,7 @@ comme **vues personnalisées** (« custom widgets »).
 | `suivi-eau-synthese` | Synthèse du suivi de l'eau potable : fuites en attente de vérification, récurrences, consommations relevées du parc communal | `https://ville-du-bouscat.github.io/grist-widgets/suivi-eau-synthese/` |
 | `suivi-contrat-synthese` | Synthèse du contrat de restauration (DSP API) : signalements des écoles et du portage, échéances contractuelles, effectifs et facturation | `https://ville-du-bouscat.github.io/grist-widgets/suivi-contrat-synthese/` |
 | `main-courante-synthese` | Synthèse de la main courante de crise pour les élus et les pilotes de cellules : dossiers à traiter, répartition par cellule, chronologie, points de situation, mode écran mural | `https://ville-du-bouscat.github.io/grist-widgets/main-courante-synthese/` |
+| `subventions-synthese` | Synthèse du suivi des subventions d'investissement : échéances à traiter, reste à percevoir, versements à pointer, note mensuelle | `https://ville-du-bouscat.github.io/grist-widgets/subventions-synthese/` |
 
 Ouverts hors de Grist, ces widgets affichent un jeu de démonstration **fictif** — voir l'avertissement ci-dessous.
 
@@ -83,6 +84,19 @@ Vue de lecture de la main courante de crise (document « Main courante de crise 
 - **Mode affichage** — vue grand écran pour la salle de crise.
 
 La colonne `Coordonnees` n'est jamais lue. Un sélecteur d'épisode filtre l'affichage (épisode le plus récent par défaut). Le widget est conçu pour être réutilisé par d'autres organisations : voir le README du dossier.
+
+### `subventions-synthese`
+
+Vue de lecture du document « Subventions Le Bouscat ». Quatre onglets, alimentés par les tables
+`Dossiers`, `Versements`, `Operations`, `Dispositifs`, `Financeurs` et `Acces_plateformes` (facultative) :
+
+- **Tableau de bord** — d'abord la liste des dossiers en retard ou à échéance sous 30 jours, puis le
+  reste à percevoir par financeur, les échéances à 90 jours, les dossiers sans prochaine action et les
+  comptes de plateforme à moins de deux accès.
+- **Dossiers** — la liste filtrable par statut, financeur et alerte.
+- **Versements à pointer** — versements annoncés non pointés avec les Finances, et demandes de
+  versement restées sans paiement.
+- **Note mensuelle** — un premier jet de note de situation, à copier.
 
 ## ⚠ Ce dépôt est public — règle absolue
 

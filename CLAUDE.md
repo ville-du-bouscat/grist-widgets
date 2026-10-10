@@ -155,3 +155,30 @@ ne correspond à un point réel. Ne jamais y substituer le référentiel de la c
 Les scripts d'alimentation du document vivent ailleurs, hors de ce dépôt, dans le dossier de
 travail `Suivi 2026 - fluides/eau/grist/` : ils ne doivent pas être committés ici, ils contiennent
 des chemins et des références réelles.
+
+## Widget `subventions-synthese`
+
+Vue de lecture du document « Subventions Le Bouscat » (subventions d'investissement, reprise du
+suivi après le départ de la gestionnaire en septembre 2026). Six tables lues, dont une facultative :
+
+| Table | Une ligne = | Fait autorité sur |
+|---|---|---|
+| `Dossiers` | une opération × un dispositif | statut, montant accordé, dates limites, prochaine action |
+| `Versements` | une avance, un acompte ou un solde | montant demandé, **montant réellement versé**, encaissement, pointage |
+| `Operations`, `Dispositifs`, `Financeurs` | référentiels | libellés |
+| `Acces_plateformes` (facultative) | un compte de plateforme | personnes ayant accès, rattachement à l'adresse fonctionnelle |
+
+Points de conception à ne pas casser :
+
+- **Le widget montre d'abord ce qui attend quelqu'un.** La liste « À traiter » (échéance dépassée ou
+  sous 30 jours) est en tête, avant les montants. C'est un délai manqué qui fait perdre une aide.
+- **Le reste à percevoir se calcule sur le versé, jamais sur le demandé.** C'est l'erreur qui a faussé
+  de 96 000 € le tableau de suivi repris (acompte demandé compté comme encaissé).
+- **Les seuils d'alerte sont ceux des formules de la base** (`SEUIL_J7`, `SEUIL_J30`, `SEUIL_J90`). Les
+  modifier ici sans modifier la colonne `Alerte` de la base créerait deux vérités.
+- L'échéance est lue dans `Prochaine_echeance` ; si la colonne manque, `prochaineEcheance()` la recalcule
+  avec la même règle que la formule de la base.
+- Aucun graphique n'utilise de bibliothèque : barres en CSS. Pas de CDN.
+
+Le jeu de démonstration embarqué utilise des opérations inventées (Groupe scolaire des Acacias,
+Médiathèque du Moulin…) et des financeurs « fictifs ». Ne jamais y substituer les dossiers de la commune.

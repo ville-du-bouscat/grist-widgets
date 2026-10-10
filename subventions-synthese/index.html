@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Synthèse des subventions — widget Grist</title>
+<style>
+:root{
+  color-scheme: light dark;
+  --plane:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --ring:rgba(11,11,11,.10);
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a;
+  --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --critical:#d03b3b;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --plane:#0d0d0d; --surface:#1a1a19; --ink:#fff; --ink2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,.10);
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--plane);color:var(--ink);
+  font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-text-size-adjust:100%}
+.wrap{max-width:1200px;margin:0 auto;padding:18px 20px 48px}
+header h1{font-size:19px;margin:0 0 2px;letter-spacing:-.01em}
+header p{color:var(--muted);font-size:12.5px;margin:0 0 14px;max-width:70ch}
+body.in-grist .wrap{padding-top:12px}
+body.in-grist header,body.in-grist .banner,body.in-grist footer{display:none}
+.statut{font-size:12.5px;padding:8px 11px;border-radius:8px;border:1px solid var(--ring);margin-bottom:14px}
+.statut.live{background:color-mix(in srgb,var(--good) 10%,transparent)}
+.statut.demo{background:color-mix(in srgb,var(--warn) 14%,transparent)}
+.statut.err{background:color-mix(in srgb,var(--critical) 10%,transparent)}
+nav{display:flex;gap:2px;flex-wrap:wrap;border-bottom:1px solid var(--grid);margin-bottom:18px}
+nav button{background:none;border:0;border-bottom:2px solid transparent;padding:9px 14px;
+  font:inherit;color:var(--ink2);cursor:pointer;margin-bottom:-1px}
+nav button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--s1);font-weight:600}
+nav button:hover{color:var(--ink)}
+nav button:focus-visible,.btn:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--s1);outline-offset:2px}
+section[hidden]{display:none!important}
+.card{background:var(--surface);border:1px solid var(--ring);border-radius:10px;padding:15px 17px;margin-bottom:15px}
+.card h2{font-size:14px;margin:0 0 2px}
+.card p.hint{color:var(--muted);font-size:12px;margin:0 0 13px;max-width:75ch}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:11px;margin-bottom:15px}
+.tile{background:var(--surface);border:1px solid var(--ring);border-radius:10px;padding:13px 15px}
+.tile .lab{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.tile .val{font-size:24px;font-weight:600;letter-spacing:-.02em;margin-top:2px;font-variant-numeric:tabular-nums}
+.tile .note{color:var(--ink2);font-size:12px;margin-top:2px}
+.tile.alerte .val{color:var(--critical)}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.cols>.card{min-width:0}
+@media (max-width:860px){.cols{grid-template-columns:1fr}}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:6px 9px;border-bottom:1px solid var(--grid);vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td.d{white-space:nowrap;font-variant-numeric:tabular-nums}
+td .sub{display:block;color:var(--muted);font-size:12px}
+.ovx{overflow-x:auto;max-width:100%}
+.badge{display:inline-block;padding:1px 7px;border-radius:99px;font-size:11px;font-weight:600;
+  border:1px solid var(--ring);white-space:nowrap}
+.b-crit{background:var(--critical);color:#fff;border-color:transparent}
+.b-j7{background:color-mix(in srgb,var(--critical) 16%,transparent);color:var(--critical)}
+.b-j30{background:color-mix(in srgb,var(--serious) 20%,transparent);color:var(--ink)}
+.b-j90{background:color-mix(in srgb,var(--warn) 22%,transparent);color:var(--ink)}
+.b-ok{background:color-mix(in srgb,var(--good) 14%,transparent);color:var(--ink)}
+.b-mute{color:var(--muted)}
+.barrow{display:grid;grid-template-columns:minmax(110px,38%) 1fr 72px;gap:8px;align-items:center;margin:5px 0;font-size:12.5px}
+.barrow .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink2)}
+.barrow .trk{background:color-mix(in srgb,var(--grid) 60%,transparent);border-radius:0 4px 4px 0;height:11px}
+.barrow .bar{height:11px;border-radius:0 4px 4px 0;background:var(--s1);min-width:1px}
+.barrow .v{font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+.filters{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:12px}
+select,input[type=search]{font:inherit;font-size:13px;padding:6px 9px;border-radius:7px;border:1px solid var(--ring);
+  background:var(--surface);color:var(--ink)}
+input[type=search]{min-width:220px}
+.btn{font:inherit;font-size:13px;padding:7px 13px;border-radius:7px;border:1px solid var(--ring);
+  background:var(--surface);color:var(--ink);cursor:pointer}
+.btn:hover{border-color:var(--s1)}
+.note-mensuelle{white-space:pre-wrap;font-size:13.5px;line-height:1.6;background:var(--plane);
+  border:1px solid var(--ring);border-radius:8px;padding:14px 16px;max-height:560px;overflow:auto}
+.footnote{color:var(--muted);font-size:11.5px;margin-top:9px}
+.empty{color:var(--muted);font-size:13px;padding:8px 0}
+.banner{background:var(--surface);border:1px solid var(--ring);border-left:3px solid var(--s1);
+  border-radius:8px;padding:11px 14px;font-size:12.5px;color:var(--ink2);margin-bottom:16px}
+footer{color:var(--muted);font-size:11.5px;margin-top:26px;border-top:1px solid var(--grid);padding-top:12px}
+@media (max-width:620px){.wrap{padding-left:13px;padding-right:13px}.tile .val{font-size:20px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Synthèse des subventions d'investissement</h1>
+  <p>Vue de lecture du document Grist « Subventions Le Bouscat » : ce qui attend quelqu'un,
+     le reste à percevoir, les versements à pointer et la note mensuelle de situation.</p>
+</header>
+
+<div class="banner">
+  Cette page est un widget Grist. Ouverte hors de Grist, elle affiche un jeu de démonstration
+  <b>entièrement inventé</b> : opérations, financeurs et montants ne correspondent à aucun dossier réel.
+</div>
+
+<div id="statut" class="statut">Chargement…</div>
+
+<nav role="tablist">
+  <button role="tab" aria-selected="true" data-tab="bord">Tableau de bord</button>
+  <button role="tab" aria-selected="false" data-tab="dossiers">Dossiers</button>
+  <button role="tab" aria-selected="false" data-tab="versements">Versements à pointer</button>
+  <button role="tab" aria-selected="false" data-tab="note">Note mensuelle</button>
+</nav>
+
+<section id="tab-bord">
+  <div class="tiles" id="tiles"></div>
+  <div class="card">
+    <h2>À traiter</h2>
+    <p class="hint">Dossiers dont une échéance est dépassée ou tombe dans les 30 prochains jours,
+      du plus urgent au moins urgent. Une échéance dépassée ne veut pas toujours dire aide perdue :
+      elle signale qu'il faut vérifier tout de suite.</p>
+    <div class="ovx" id="atraiter"></div>
+  </div>
+  <div class="cols">
+    <div class="card">
+      <h2>Reste à percevoir par financeur</h2>
+      <p class="hint">Montant accordé moins montant réellement versé, pour les dossiers non clos.</p>
+      <div id="parfin"></div>
+    </div>
+    <div class="card">
+      <h2>Échéances des 90 prochains jours</h2>
+      <p class="hint">Par mois, avec le montant en jeu.</p>
+      <div id="echeances"></div>
+    </div>
+  </div>
+  <div class="cols">
+    <div class="card">
+      <h2>Dossiers actifs sans prochaine action</h2>
+      <p class="hint">Un dossier ouvert sans action prévue finit par être oublié.</p>
+      <div class="ovx" id="sansaction"></div>
+    </div>
+    <div class="card">
+      <h2>Comptes de plateforme fragiles</h2>
+      <p class="hint">Moins de deux personnes ayant accès, ou compte pas encore rattaché à l'adresse fonctionnelle.</p>
+      <div class="ovx" id="acces"></div>
+    </div>
+  </div>
+</section>
+
+<section id="tab-dossiers" hidden>
+  <div class="card">
+    <div class="filters">
+      <input type="search" id="f-txt" placeholder="Rechercher une opération, un financeur…" aria-label="Rechercher">
+      <select id="f-statut" aria-label="Statut"></select>
+      <select id="f-fin" aria-label="Financeur"></select>
+      <select id="f-alerte" aria-label="Alerte"></select>
+    </div>
+    <div class="ovx" id="liste"></div>
+    <p class="footnote" id="liste-total"></p>
+  </div>
+</section>
+
+<section id="tab-versements" hidden>
+  <div class="card">
+    <h2>Versements annoncés, non pointés avec les Finances</h2>
+    <p class="hint">À rapprocher du compte d'attente et de Grand Angle avec les Finances du Pôle territorial,
+      puis cocher « Pointé » dans la table Versements.</p>
+    <div class="ovx" id="apointer"></div>
+  </div>
+  <div class="card">
+    <h2>Demandes de versement en attente de paiement</h2>
+    <p class="hint">Demande envoyée, aucun montant versé enregistré. L'ancienneté sert à décider d'une relance.</p>
+    <div class="ovx" id="attente"></div>
+  </div>
+</section>
+
+<section id="tab-note" hidden>
+  <div class="card">
+    <h2>Note de situation</h2>
+    <p class="hint">Premier jet à relire avant diffusion au CODIR ou à l'élu aux finances. Les montants
+      sont ceux de la base à l'instant de l'ouverture.</p>
+    <p><button class="btn" id="copier">Copier la note</button> <span id="copie-ok" class="footnote"></span></p>
+    <div class="note-mensuelle" id="note"></div>
+  </div>
+</section>
+
+<footer>
+  <b>Widget Grist, en lecture seule.</b> À ajouter comme vue personnalisée dans le document
+  « Subventions Le Bouscat », avec le niveau d'accès « Accès complet au document » : il lit sept tables.
+  Ouvert hors de Grist, il n'affiche qu'un jeu de démonstration inventé. — Ville du Bouscat.
+</footer>
+</div>
+
+<script>
+/* ===================================================================
+   Widget Grist — Synthèse des subventions d'investissement (Ville du Bouscat)
+
+   Deux modes :
+     • ouvert hors de Grist -> jeu de démonstration FICTIF embarqué
+     • ouvert dans Grist    -> lit en direct les tables du document
+
+   L'API Grist est chargée depuis l'instance qui affiche le widget
+   (déduite du référent), jamais depuis un CDN.
+
+   LECTURE SEULE. Les seuls appels à Grist sont des fetchTable.
+   Aucune dépendance externe : les barres sont en CSS.
+   =================================================================== */
+
+const TABLES = { dossiers:"Dossiers", versements:"Versements", operations:"Operations",
+                 dispositifs:"Dispositifs", financeurs:"Financeurs",
+                 acces:"Acces_plateformes", actions:"Actions" };
+const GRIST_URL_MANUEL = "";      // ex. "https://grist.numerique.gouv.fr" si le référent est masqué
+
+// Seuils métier — identiques aux formules de la base (colonne Alerte)
+const SEUIL_J7 = 7, SEUIL_J30 = 30, SEUIL_J90 = 90;
+const SEUIL_RELANCE_JOURS = 60;   // au-delà, une demande de versement sans paiement mérite une relance
+const STATUTS = ["Opportunité","En montage","Déposé","Accordé","Acompte perçu","Solde demandé",
+                 "Soldé","Refusé","Caduc","Abandonné"];
+const CLOS = new Set(["Soldé","Refusé","Caduc","Abandonné"]);
+
+/* ---------- utilitaires ---------- */
+const eur  = n => n==null||isNaN(n) ? "—" : new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR",maximumFractionDigits:0}).format(n);
+const eurK = n => n==null||isNaN(n) ? "—" : (Math.abs(n)>=1e6 ? new Intl.NumberFormat("fr-FR",{maximumFractionDigits:2}).format(n/1e6)+" M€"
+                 : Math.abs(n)>=1e4 ? new Intl.NumberFormat("fr-FR",{maximumFractionDigits:0}).format(n/1e3)+" k€" : eur(n));
+const esc  = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pluriel = (n,mot,suff) => n+" "+mot+(n>1?(suff||"s"):"");
+const MOIS = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+
+// Date Grist : secondes depuis l'époque (UTC minuit), ou texte AAAA-MM-JJ.
+function versDate(v){
+  if(v==null||v==="") return null;
+  if(typeof v==="number"){ const d=new Date(v*1000); return new Date(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()); }
+  const m=String(v).match(/(\d{4})-(\d{2})-(\d{2})/);
+  return m ? new Date(+m[1],+m[2]-1,+m[3]) : null;
+}
+function aujourdHui(){ const d=new Date(); return new Date(d.getFullYear(),d.getMonth(),d.getDate()); }
+function joursAvant(d){ return d ? Math.round((d-aujourdHui())/864e5) : null; }
+const fdate = d => d ? d.toLocaleDateString("fr-FR") : "—";
+function nombre(v){
+  if(v==null||v==="") return null;
+  const n=typeof v==="number"?v:parseFloat(String(v).replace(",","."));
+  return isNaN(n)?null:n;
+}
+function pick(o,...noms){
+  for(const n of noms) if(o && o[n]!==undefined && o[n]!==null && o[n]!=="") return o[n];
+  return "";
+}
+function liste(v){ return Array.isArray(v) ? (v[0]==="L" ? v.slice(1) : v) : (v ? String(v).split(",").map(s=>s.trim()).filter(Boolean) : []); }
+function setStatut(cl, html){
+  const e=document.getElementById("statut");
+  e.className="statut "+cl; e.innerHTML=html;
+}
+
+/* ---------- jeu de démonstration — ENTIÈREMENT FICTIF ----------
+   Opérations, financeurs, montants et dates sont inventés. Les dates sont
+   exprimées en jours par rapport à aujourd'hui pour que l'écran reste parlant. */
+const DEMO_OPS = ["Groupe scolaire des Acacias — rénovation énergétique","Médiathèque du Moulin — extension",
+  "Parc des Tilleuls — désimperméabilisation","Gymnase du Vieux Chêne — toiture","Crèche Les Lucioles — relamping",
+  "Salle polyvalente de la Fontaine — accessibilité","Cour d'école des Peupliers — végétalisation"];
+const DEMO_FIN = ["État (dotation fictive A)","Agence fictive de l'eau","Intercommunalité fictive","Caisse fictive","Fondation fictive"];
+// [op, financeur, statut, accordé, [versements: montant, jours depuis, encaissé?], échéance (jours), action]
+const DEMO_DOSS = [
+  [0,0,"Acompte perçu",420000,[[126000,-300,1],[150000,-90,0]],-12,"Déposer l'appel de fonds avec justificatifs"],
+  [0,2,"Accordé",180000,[],18,"Transmettre le PV de réception et le bilan financier"],
+  [1,4,"Solde demandé",95000,[[40000,-200,1]],9,"Vérifier la réception du recommandé"],
+  [2,1,"Accordé",62000,[],45,"Préparer l'état récapitulatif visé"],
+  [2,2,"Acompte perçu",80000,[[56000,-120,0]],75,"Préparer la demande de solde"],
+  [3,0,"Déposé",null,[],-3,"Informer l'instructeur du nouveau calendrier"],
+  [4,3,"Accordé",24000,[],26,""],
+  [5,0,"Opportunité",null,[],60,"Préparer la délibération dédiée"],
+  [6,1,"Soldé",31000,[[31000,-400,1]],null,""],
+  [6,2,"Refusé",null,[],null,""],
+  [3,3,"Solde demandé",50000,[[15000,-260,1]],140,""],
+];
+const DEMO_ACCES = [["Plateforme fictive A",["Agent A"],"À faire"],["Plateforme fictive B",["Agent A","Agent B"],"Faite"],
+  ["Plateforme fictive C",[],"À faire"]];
+
+/* ---------- données normalisées ---------- */
+let DOSS=[], VERS=[], ACCES=[];
+
+function rendTout(){ rendBord(); rendFiltres(); rendListe(); rendVersements(); rendNote(); }
+
+function alerteDe(j){
+  if(j==null) return "—";
+  if(j<0) return "Dépassé";
+  if(j<=SEUIL_J7) return "J-7";
+  if(j<=SEUIL_J30) return "J-30";
+  if(j<=SEUIL_J90) return "J-90";
+  return "OK";
+}
+function badge(a){
+  const c={"Dépassé":"b-crit","J-7":"b-j7","J-30":"b-j30","J-90":"b-j90","OK":"b-ok"}[a]||"b-mute";
+  return `<span class="badge ${c}">${esc(a)}</span>`;
+}
+// Recalcule l'échéance comme la formule Prochaine_echeance de la base, au cas où la colonne manquerait.
+function prochaineEcheance(d){
+  if(CLOS.has(d.statut)) return null;
+  let dates=[d.echeanceAction];
+  if(d.statut==="Accordé"||d.statut==="Acompte perçu") dates.push(d.limCommencement,d.limAchevement,d.limSolde);
+  if(d.statut==="Solde demandé") dates.push(d.limSolde);
+  dates=dates.filter(Boolean).sort((a,b)=>a-b);
+  return dates[0]||null;
+}
+function completer(d){
+  d.verse = VERS.filter(v=>v.dossier===d.id).reduce((s,v)=>s+(v.verse||0),0);
+  d.encaisse = VERS.filter(v=>v.dossier===d.id && v.encaissement).reduce((s,v)=>s+(v.verse||0),0);
+  d.reste = CLOS.has(d.statut) ? 0 : Math.max((d.accorde||0)-d.verse,0);
+  if(!d.echeance) d.echeance = prochaineEcheance(d);
+  d.jours = joursAvant(d.echeance);
+  d.alerte = alerteDe(d.jours);
+  d.actif = !CLOS.has(d.statut);
+  return d;
+}
+
+/* ---------- tableau de bord ---------- */
+function rendBord(){
+  const actifs=DOSS.filter(d=>d.actif);
+  const urgents=actifs.filter(d=>["Dépassé","J-7","J-30"].includes(d.alerte)).sort((a,b)=>a.jours-b.jours);
+  const depasses=urgents.filter(d=>d.alerte==="Dépassé").length;
+  const reste=actifs.reduce((s,d)=>s+d.reste,0);
+  const accorde=DOSS.filter(d=>!["Refusé","Caduc","Abandonné"].includes(d.statut)).reduce((s,d)=>s+(d.accorde||0),0);
+  const verse=DOSS.reduce((s,d)=>s+d.verse,0), encaisse=DOSS.reduce((s,d)=>s+d.encaisse,0);
+  const sansAction=actifs.filter(d=>!d.prochaineAction);
+  const fragiles=ACCES.filter(a=>a.personnes.length<2 || a.migration!=="Faite");
+  const apointer=VERS.filter(v=>v.verse && !v.pointe);
+
+  document.getElementById("tiles").innerHTML=[
+    tile("À traiter sous 30 jours", urgents.length, depasses ? pluriel(depasses,"échéance")+" dépassée"+(depasses>1?"s":"") : "aucune échéance dépassée", urgents.length>0),
+    tile("Reste à percevoir", eurK(reste), pluriel(actifs.filter(d=>d.reste>0).length,"dossier")+" concerné"+(actifs.filter(d=>d.reste>0).length>1?"s":"")),
+    tile("Accordé / versé", eurK(accorde), "versé "+eurK(verse)+", dont encaissé "+eurK(encaisse)),
+    tile("Versements à pointer", apointer.length, eurK(apointer.reduce((s,v)=>s+v.verse,0))+" à rapprocher", apointer.length>0),
+    tile("Dossiers actifs", actifs.length, sansAction.length+" sans prochaine action"),
+    tile("Comptes fragiles", fragiles.length, "sur "+pluriel(ACCES.length,"plateforme"), fragiles.some(a=>a.personnes.length<2)),
+  ].join("");
+
+  document.getElementById("atraiter").innerHTML = urgents.length ? `<table><thead><tr>
+    <th>Alerte</th><th class="n">Jours</th><th>Échéance</th><th>Dossier</th><th>Prochaine action</th><th class="n">Reste</th></tr></thead><tbody>`
+    + urgents.map(d=>`<tr><td>${badge(d.alerte)}</td><td class="n">${d.jours}</td><td class="d">${fdate(d.echeance)}</td>
+      <td>${esc(d.operation)}<span class="sub">${esc(d.dispositif||d.financeur)} · ${esc(d.statut)}</span></td>
+      <td>${esc(d.prochaineAction)||'<span class="b-mute">à définir</span>'}</td><td class="n">${d.reste?eur(d.reste):"—"}</td></tr>`).join("")
+    + "</tbody></table>" : `<p class="empty">Aucune échéance dépassée ni dans les 30 prochains jours.</p>`;
+
+  // Reste par financeur
+  const parFin={}; actifs.forEach(d=>{ if(d.reste>0) parFin[d.financeur||"Financeur non renseigné"]=(parFin[d.financeur||"Financeur non renseigné"]||0)+d.reste; });
+  const rows=Object.entries(parFin).sort((a,b)=>b[1]-a[1]); const max=rows.length?rows[0][1]:1;
+  document.getElementById("parfin").innerHTML = rows.length ? rows.map(([f,v])=>`<div class="barrow">
+      <span class="lbl" title="${esc(f)}">${esc(f)}</span><span class="trk"><span class="bar" style="display:block;width:${Math.max(1,v/max*100)}%"></span></span>
+      <span class="v">${eurK(v)}</span></div>`).join("") : `<p class="empty">Aucun reste à percevoir.</p>`;
+
+  // Échéances 90 jours par mois
+  const prochaines=actifs.filter(d=>d.jours!=null && d.jours>=0 && d.jours<=SEUIL_J90).sort((a,b)=>a.jours-b.jours);
+  const parMois={}; prochaines.forEach(d=>{ const k=d.echeance.getFullYear()+"-"+String(d.echeance.getMonth()).padStart(2,"0"); (parMois[k]=parMois[k]||[]).push(d); });
+  document.getElementById("echeances").innerHTML = prochaines.length ? Object.keys(parMois).sort().map(k=>{
+      const [y,m]=k.split("-"); const ds=parMois[k];
+      return `<table style="margin-bottom:10px"><thead><tr><th colspan="2">${MOIS[+m]} ${y} — ${pluriel(ds.length,"échéance")}</th><th class="n">${eurK(ds.reduce((s,d)=>s+d.reste,0))}</th></tr></thead><tbody>`
+        + ds.map(d=>`<tr><td class="d">${fdate(d.echeance)}</td><td>${esc(d.operation)}<span class="sub">${esc(d.dispositif||d.financeur)}</span></td><td class="n">${d.reste?eur(d.reste):"—"}</td></tr>`).join("")
+        + "</tbody></table>"; }).join("") : `<p class="empty">Aucune échéance dans les 90 prochains jours.</p>`;
+
+  document.getElementById("sansaction").innerHTML = sansAction.length ? `<table><thead><tr><th>Dossier</th><th>Statut</th><th class="n">Reste</th></tr></thead><tbody>`
+    + sansAction.map(d=>`<tr><td>${esc(d.operation)}<span class="sub">${esc(d.dispositif||d.financeur)}</span></td><td>${esc(d.statut)}</td><td class="n">${d.reste?eur(d.reste):"—"}</td></tr>`).join("")
+    + "</tbody></table>" : `<p class="empty">Tous les dossiers actifs ont une prochaine action.</p>`;
+
+  document.getElementById("acces").innerHTML = fragiles.length ? `<table><thead><tr><th>Plateforme</th><th>Accès</th><th>Rattachement</th></tr></thead><tbody>`
+    + fragiles.map(a=>`<tr><td>${esc(a.plateforme)}</td><td>${a.personnes.length<2?`<span class="badge b-j7">${a.personnes.length} personne${a.personnes.length>1?"s":""}</span>`:esc(a.personnes.join(", "))}</td><td>${esc(a.migration||"—")}</td></tr>`).join("")
+    + "</tbody></table>" : `<p class="empty">Chaque plateforme a au moins deux accès et est rattachée à l'adresse fonctionnelle.</p>`;
+}
+function tile(lab,val,note,alerte){
+  return `<div class="tile${alerte?" alerte":""}"><div class="lab">${esc(lab)}</div><div class="val">${val}</div><div class="note">${esc(note)}</div></div>`;
+}
+
+/* ---------- liste des dossiers ---------- */
+function rendFiltres(){
+  const opt=(id,lab,vals)=>{ const s=document.getElementById(id); const cur=s.value;
+    s.innerHTML=`<option value="">${lab}</option>`+vals.map(v=>`<option${v===cur?" selected":""}>${esc(v)}</option>`).join(""); };
+  opt("f-statut","Tous les statuts",STATUTS.filter(s=>DOSS.some(d=>d.statut===s)));
+  opt("f-fin","Tous les financeurs",[...new Set(DOSS.map(d=>d.financeur).filter(Boolean))].sort());
+  opt("f-alerte","Toutes les alertes",["Dépassé","J-7","J-30","J-90","OK","—"].filter(a=>DOSS.some(d=>d.alerte===a)));
+}
+function rendListe(){
+  const t=document.getElementById("f-txt").value.toLowerCase(), st=document.getElementById("f-statut").value,
+        fi=document.getElementById("f-fin").value, al=document.getElementById("f-alerte").value;
+  const rows=DOSS.filter(d=>(!st||d.statut===st)&&(!fi||d.financeur===fi)&&(!al||d.alerte===al)
+    &&(!t||(d.operation+" "+d.dispositif+" "+d.financeur).toLowerCase().includes(t)))
+    .sort((a,b)=>(a.actif===b.actif?0:a.actif?-1:1)||((a.jours??1e9)-(b.jours??1e9)));
+  document.getElementById("liste").innerHTML = rows.length ? `<table><thead><tr><th>Alerte</th><th>Dossier</th><th>Statut</th>
+    <th class="n">Accordé</th><th class="n">Versé</th><th class="n">Reste</th><th>Échéance</th></tr></thead><tbody>`
+    + rows.map(d=>`<tr><td>${badge(d.alerte)}</td><td>${esc(d.operation)}<span class="sub">${esc(d.dispositif||"")}${d.financeur?" · "+esc(d.financeur):""}</span></td>
+      <td>${esc(d.statut)}</td><td class="n">${d.accorde?eur(d.accorde):"—"}</td><td class="n">${d.verse?eur(d.verse):"—"}</td>
+      <td class="n">${d.reste?eur(d.reste):"—"}</td><td class="d">${fdate(d.echeance)}</td></tr>`).join("")
+    + "</tbody></table>" : `<p class="empty">Aucun dossier ne correspond aux filtres.</p>`;
+  document.getElementById("liste-total").textContent = pluriel(rows.length,"dossier")+" — reste à percevoir : "+eur(rows.reduce((s,d)=>s+d.reste,0));
+}
+["f-txt","f-statut","f-fin","f-alerte"].forEach(id=>document.getElementById(id).addEventListener("input",rendListe));
+
+/* ---------- versements ---------- */
+function rendVersements(){
+  const libelle=id=>{ const d=DOSS.find(x=>x.id===id); return d?`${esc(d.operation)}<span class="sub">${esc(d.dispositif||d.financeur)}</span>`:"—"; };
+  const ap=VERS.filter(v=>v.verse && !v.pointe).sort((a,b)=>(a.dateVersement||0)-(b.dateVersement||0));
+  document.getElementById("apointer").innerHTML = ap.length ? `<table><thead><tr><th>Dossier</th><th>Nature</th><th class="n">Versé</th><th>Versement</th><th>Encaissement</th><th>Note</th></tr></thead><tbody>`
+    + ap.map(v=>`<tr><td>${libelle(v.dossier)}</td><td>${esc(v.nature)}</td><td class="n">${eur(v.verse)}</td><td class="d">${fdate(v.dateVersement)}</td>
+      <td class="d">${v.encaissement?fdate(v.encaissement):'<span class="b-mute">non constaté</span>'}</td><td>${esc(v.notes)}</td></tr>`).join("")
+    + "</tbody></table>" : `<p class="empty">Tous les versements enregistrés sont pointés.</p>`;
+  const att=VERS.filter(v=>v.demande && !v.verse).map(v=>({...v,age:v.dateDemande?-joursAvant(v.dateDemande):null}))
+    .sort((a,b)=>(b.age??-1)-(a.age??-1));
+  document.getElementById("attente").innerHTML = att.length ? `<table><thead><tr><th>Dossier</th><th>Nature</th><th class="n">Demandé</th><th>Demande</th><th class="n">Ancienneté</th><th>Envoi</th></tr></thead><tbody>`
+    + att.map(v=>`<tr><td>${libelle(v.dossier)}</td><td>${esc(v.nature)}</td><td class="n">${eur(v.demande)}</td><td class="d">${fdate(v.dateDemande)}</td>
+      <td class="n">${v.age==null?"—":(v.age>SEUIL_RELANCE_JOURS?`<span class="badge b-j30">${v.age} j</span>`:v.age+" j")}</td><td>${esc(v.mode||"—")}</td></tr>`).join("")
+    + "</tbody></table>" : `<p class="empty">Aucune demande de versement en attente.</p>`;
+}
+
+/* ---------- note mensuelle ---------- */
+function rendNote(){
+  const auj=aujourdHui(), actifs=DOSS.filter(d=>d.actif);
+  const reste=actifs.reduce((s,d)=>s+d.reste,0);
+  const urg=actifs.filter(d=>["Dépassé","J-7","J-30"].includes(d.alerte)).sort((a,b)=>a.jours-b.jours);
+  const j90=actifs.filter(d=>d.alerte==="J-90").sort((a,b)=>a.jours-b.jours);
+  const ap=VERS.filter(v=>v.verse && !v.pointe);
+  const att=VERS.filter(v=>v.demande && !v.verse);
+  const fr=ACCES.filter(a=>a.personnes.length<2);
+  const parSt={}; DOSS.forEach(d=>parSt[d.statut]=(parSt[d.statut]||0)+1);
+  const L=[];
+  L.push("Suivi des subventions d'investissement — situation au "+auj.toLocaleDateString("fr-FR"));
+  L.push("");
+  L.push("1. Vue d'ensemble");
+  L.push("- "+pluriel(DOSS.length,"dossier")+" suivis, dont "+pluriel(actifs.length,"actif")+".");
+  L.push("- Répartition : "+STATUTS.filter(s=>parSt[s]).map(s=>s.toLowerCase()+" "+parSt[s]).join(", ")+".");
+  L.push("- Reste à percevoir sur les aides accordées : "+eur(reste)+".");
+  L.push("");
+  L.push("2. Points d'attention (échéance dépassée ou sous 30 jours)");
+  if(!urg.length) L.push("- Aucun.");
+  urg.forEach(d=>L.push("- "+d.operation+" ("+(d.dispositif||d.financeur)+") : "+(d.jours<0?"échéance dépassée depuis "+(-d.jours)+" jours":"échéance le "+fdate(d.echeance))
+    +(d.reste?", "+eur(d.reste)+" en jeu":"")+(d.prochaineAction?". Action : "+d.prochaineAction:"")+"."));
+  L.push("");
+  L.push("3. Échéances à 90 jours");
+  if(!j90.length) L.push("- Aucune.");
+  j90.forEach(d=>L.push("- "+fdate(d.echeance)+" — "+d.operation+" ("+(d.dispositif||d.financeur)+")"+(d.reste?", "+eur(d.reste):"")+"."));
+  L.push("");
+  L.push("4. Encaissements");
+  L.push("- "+pluriel(ap.length,"versement")+" à pointer avec les Finances, pour "+eur(ap.reduce((s,v)=>s+v.verse,0))+".");
+  L.push("- "+pluriel(att.length,"demande")+" de versement en attente de paiement, pour "+eur(att.reduce((s,v)=>s+(v.demande||0),0))+".");
+  L.push("");
+  L.push("5. Organisation");
+  L.push("- "+pluriel(fr.length,"compte")+" de plateforme avec moins de deux accès"+(fr.length?" : "+fr.map(a=>a.plateforme).join(" ; "):"")+".");
+  L.push("");
+  L.push("À compléter : arbitrages proposés, dossiers à engager, délibérations à prévoir.");
+  document.getElementById("note").textContent=L.join("\n");
+}
+document.getElementById("copier").addEventListener("click",()=>{
+  const txt=document.getElementById("note").textContent, ok=document.getElementById("copie-ok");
+  const repli=()=>{ const r=document.createRange(); r.selectNodeContents(document.getElementById("note"));
+    const s=getSelection(); s.removeAllRanges(); s.addRange(r); ok.textContent="Texte sélectionné : utiliser Cmd+C ou Ctrl+C."; };
+  try{ navigator.clipboard.writeText(txt).then(()=>ok.textContent="Note copiée.",repli); }catch(e){ repli(); }
+});
+
+/* ---------- onglets ---------- */
+document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll("nav button").forEach(x=>x.setAttribute("aria-selected",x===b?"true":"false"));
+  document.querySelectorAll("section[id^=tab-]").forEach(s=>s.hidden = s.id!=="tab-"+b.dataset.tab);
+}));
+
+/* ---------- connexion à Grist ---------- */
+function chargerScript(src){
+  return new Promise((ok,ko)=>{
+    const s=document.createElement("script");
+    s.src=src; s.onload=ok; s.onerror=()=>ko(new Error("chargement impossible : "+src));
+    document.head.appendChild(s);
+  });
+}
+function origineGrist(){
+  if(GRIST_URL_MANUEL) return GRIST_URL_MANUEL;
+  try{ if(document.referrer) return new URL(document.referrer).origin; }catch(e){}
+  return null;
+}
+async function bootGrist(){
+  if(window.self===window.top) return false;          // pas dans une iframe : mode démonstration
+  const origine=origineGrist();
+  if(!origine) throw new Error("instance Grist introuvable (référent masqué) — renseigner GRIST_URL_MANUEL");
+  document.body.classList.add("in-grist");
+  await chargerScript(origine+"/grist-plugin-api.js");
+  if(!window.grist) throw new Error("l'API Grist ne s'est pas chargée");
+  grist.ready({ requiredAccess:"full" });             // sept tables lues : accès complet requis
+  await rafraichir();
+  grist.onRecords(()=>rafraichir());
+  return true;
+}
+function facultative(nom){ return grist.docApi.fetchTable(nom).catch(()=>null); }
+const enLignes = t => !t ? [] : (t.id||[]).map((_,i)=>{ const o={}; for(const k in t) o[k]=t[k][i]; return o; });
+
+async function rafraichir(){
+  const [d,v,o,di,f,a] = await Promise.all([
+    grist.docApi.fetchTable(TABLES.dossiers),
+    grist.docApi.fetchTable(TABLES.versements),
+    grist.docApi.fetchTable(TABLES.operations),
+    grist.docApi.fetchTable(TABLES.dispositifs),
+    grist.docApi.fetchTable(TABLES.financeurs),
+    facultative(TABLES.acces),
+  ]);
+  const ops=new Map(enLignes(o).map(r=>[r.id,r])), dis=new Map(enLignes(di).map(r=>[r.id,r])), fins=new Map(enLignes(f).map(r=>[r.id,r]));
+  VERS = enLignes(v).map(r=>({ id:r.id, dossier:pick(r,"Dossier"), nature:pick(r,"Nature"),
+    demande:nombre(pick(r,"Montant_demande")), dateDemande:versDate(pick(r,"Date_demande")), mode:pick(r,"Mode_envoi"),
+    verse:nombre(pick(r,"Montant_verse")), dateVersement:versDate(pick(r,"Date_versement")),
+    encaissement:versDate(pick(r,"Date_encaissement")), pointe:!!r.Pointe, notes:pick(r,"Notes") }));
+  DOSS = enLignes(d).map(r=>{
+    const op=ops.get(r.Operation)||{}, dp=dis.get(r.Dispositif)||{}, fn=fins.get(r.Financeur||dp.Financeur)||{};
+    return completer({ id:r.id, operation:pick(op,"Nom")||"Opération non renseignée", dispositif:pick(dp,"Nom"), financeur:pick(fn,"Nom"),
+      statut:pick(r,"Statut")||"—", accorde:nombre(pick(r,"Montant_accorde")),
+      echeance:versDate(pick(r,"Prochaine_echeance")),
+      echeanceAction:versDate(pick(r,"Echeance_action")), limCommencement:versDate(pick(r,"Limite_commencement")),
+      limAchevement:versDate(pick(r,"Limite_achevement")), limSolde:versDate(pick(r,"Limite_solde")),
+      prochaineAction:pick(r,"Prochaine_action") });
+  });
+  ACCES = enLignes(a).map(r=>({ plateforme:pick(r,"Plateforme"), personnes:liste(r.Personnes), migration:pick(r,"Migration") }));
+  setStatut("live","<b>Connecté à Grist</b> — "+pluriel(DOSS.length,"dossier")+", "+pluriel(VERS.length,"versement")
+    +", "+pluriel(ACCES.length,"plateforme")+".");
+  rendTout();
+}
+
+/* ---------- démarrage ---------- */
+function chargerDemo(){
+  const auj=aujourdHui(), dans=j=>j==null?null:new Date(auj.getTime()+j*864e5);
+  VERS=[]; let vid=1;
+  DOSS = DEMO_DOSS.map((x,i)=>{
+    const [op,fi,st,acc,vs,ech,act]=x; const id=i+1;
+    vs.forEach(([m,j,enc])=>VERS.push({id:vid++,dossier:id,nature:"Acompte",demande:m,dateDemande:dans(j-30),mode:"Plateforme",
+      verse:m,dateVersement:dans(j),encaissement:enc?dans(j+10):null,pointe:!!enc,notes:enc?"":"Encaissement à constater"}));
+    return { id, operation:DEMO_OPS[op], dispositif:"Dispositif fictif "+(fi+1), financeur:DEMO_FIN[fi], statut:st, accorde:acc,
+      echeance:null, echeanceAction:dans(ech), limCommencement:null, limAchevement:null, limSolde:null, prochaineAction:act };
+  });
+  VERS.push({id:vid++,dossier:3,nature:"Solde",demande:55000,dateDemande:dans(-95),mode:"LRAR",verse:null,dateVersement:null,encaissement:null,pointe:false,notes:""});
+  VERS.push({id:vid++,dossier:11,nature:"Solde",demande:35000,dateDemande:dans(-20),mode:"Courriel",verse:null,dateVersement:null,encaissement:null,pointe:false,notes:""});
+  DOSS.forEach(completer);
+  ACCES = DEMO_ACCES.map(([p,pe,m])=>({plateforme:p,personnes:pe,migration:m}));
+}
+bootGrist().then(connecte=>{
+  if(connecte) return;
+  chargerDemo();
+  setStatut("demo","<b>Jeu de démonstration</b> — cette page n'est pas ouverte dans Grist. Opérations, "
+    +"financeurs et montants sont inventés ; aucune donnée de la commune n'apparaît ici.");
+  rendTout();
+}).catch(e=>{
+  setStatut("err","<b>Connexion à Grist impossible</b> — "+esc(e.message)
+    +". Vérifier que la vue personnalisée a bien le niveau « Accès complet au document ».");
+  chargerDemo(); rendTout();
+});
+</script>
+</body>
+</html>
